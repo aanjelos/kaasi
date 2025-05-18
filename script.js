@@ -1,163 +1,2705 @@
-const $=e=>document.querySelector(e),$$=e=>document.querySelectorAll(e),formatCurrency=e=>(("number"!=typeof e||isNaN(e))&&(e=0),`LKR ${e.toFixed(2).replace(/\d(?=(\d{3})+\.)/g,"$&,")}`),generateId=()=>"_"+Math.random().toString(36).substr(2,9),getDaysLeft=e=>{let t=new Date;t.setHours(0,0,0,0);let a=new Date(e);return a.setHours(0,0,0,0),Math.ceil((a-t)/864e5)};function getCurrentDateString(){let e=new Date,t=e.getFullYear(),a=String(e.getMonth()+1).padStart(2,"0"),n=String(e.getDate()).padStart(2,"0");return`${t}-${a}-${n}`}function getFormattedLocalStorageSize(e){let t=localStorage.getItem(e);if(null===t)return"N/A (No data found)";let a=t.length;return a<1024?`${a} Bytes`:a<1048576?`${(a/1024).toFixed(2)} KB`:`${(a/1048576).toFixed(2)} MB`}function displayAppVersion(){let e="N/A";try{let t=document.querySelector('meta[name="application-version"]');t?e=t.getAttribute("content"):console.warn("Application version meta tag not found.")}catch(a){console.error("Error reading application version:",a)}let n=document.getElementById("appVersionSettings");n&&(n.textContent=`Version: ${e}`);let o=document.getElementById("appVersionSetup");o&&(o.textContent=`Version: ${e}`)}function toggleCategoryVisibilityInModal(e,t,a){let n=document.getElementById(t),o=document.getElementById(a),i=e.form.elements.description||e.form.elements.modalDescription||e.form.elements.ccDescription||e.form.elements.modalCcDescription;"income"===e.value?(n&&(n.style.display="none"),o&&(o.required=!1),i&&(i.placeholder="e.g., Monthly Salary")):(n&&(n.style.display="block"),o&&(o.required=!0),i&&(i.placeholder="e.g., Lunch, Groceries"))}let state={};function getDefaultState(){return JSON.parse(JSON.stringify({transactions:[],accounts:[{id:"cash",name:"Cash",balance:0},{id:"bank_1",name:"Commercial",balance:0},{id:"bank_2",name:"HNB",balance:0},{id:"bank_3",name:"Genie",balance:0},],categories:["Food & Dining","Groceries","Transportation","Healthcare","Personal Care","Shopping","Entertainment","Education","Gifts & Donations","Travel","Subscriptions & Memberships","Bank Charges","Other",].sort((e,t)=>e.localeCompare(t)),debts:[],receivables:[],installments:[],creditCard:{limit:0,transactions:[]},settings:{initialSetupDone:!1,showCcDashboardSection:!0,theme:"dark"}}))}function openInitialSetupWizard(){let e=$("#initialSetupModal");if(!e){console.error("Initial Setup Modal not found in HTML.");return}console.log("Opening Initial Setup Wizard...");let t=$("#setupAccountBalances");t.innerHTML="";let a=getDefaultState().accounts;a.forEach(e=>{let a=document.createElement("div");a.className="grid grid-cols-1 sm:grid-cols-[2fr,3fr] gap-x-3 items-center mb-2";let n,o='style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);"';n="cash"===e.id?`<label for="setupBalance-${e.id}" class="text-sm font-medium text-gray-300 justify-self-start col-span-1 sm:col-span-1">${e.name}</label>`:`<input type="text" id="setupName-${e.id}" name="setupName-${e.id}" value="${e.name}" data-account-id="${e.id}" class="!py-1.5 !px-2 text-sm w-full rounded placeholder-gray-400 col-span-1 sm:col-span-1" ${o} placeholder="Account Name">`;let i=`<input type="number" id="setupBalance-${e.id}" name="setupBalance-${e.id}" data-account-id="${e.id}" step="0.01" placeholder="0.00 (Optional)" class="!py-1.5 !px-2 text-sm w-full rounded placeholder-gray-400 col-span-1 sm:col-span-1" ${o}>`;"cash"===e.id?a.innerHTML=`${n}<div class="sm:col-span-1"> ${i}</div>`:a.innerHTML=`<div class="col-span-1 sm:col-span-1">${n}</div><div class="col-span-1 sm:col-span-1 mt-1 sm:mt-0">${i}</div>`,t.appendChild(a)});let n=$("#setupEnableCc"),o=$("#setupCcLimitGroup"),i=$("#setupCcLimit");n&&o&&i&&(n.checked=!0,o.style.display="block",i.required=!0,i.style.backgroundColor="var(--bg-secondary)",i.style.borderColor="var(--border-color)",i.style.color="var(--text-primary)",n.onchange=()=>{n.checked?(o.style.display="block",i.required=!0):(o.style.display="none",i.required=!1,i.value="")});let r=$("#setupCategoriesList"),s=$("#setupNewCategoryName"),l=$("#setupAddCategoryBtn"),c=[...getDefaultState().categories];s&&(s.style.backgroundColor="var(--bg-secondary)",s.style.borderColor="var(--border-color)",s.style.color="var(--text-primary)");let d=()=>{r&&(r.innerHTML="",c.sort((e,t)=>e.localeCompare(t)).forEach(e=>{let t=document.createElement("div");t.className="flex justify-between items-center p-2 rounded text-sm",t.style.backgroundColor="var(--bg-secondary)",t.style.borderColor="var(--border-color)",t.style.borderWidth="1px",t.innerHTML=`
-              <span>${e}</span>
-              <button type="button" class="text-red-400 hover:text-red-300 text-xs ml-2" data-category-name="${e}" title="Remove">
+// --- UTILITIES ---
+const $ = (selector) => document.querySelector(selector);
+const $$ = (selector) => document.querySelectorAll(selector);
+const formatCurrency = (amount) => {
+  if (typeof amount !== "number" || isNaN(amount)) amount = 0;
+  return `LKR ${amount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, "$&,")}`;
+};
+const generateId = () => "_" + Math.random().toString(36).substr(2, 9);
+const getDaysLeft = (dueDate) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(dueDate);
+  due.setHours(0, 0, 0, 0);
+  return Math.ceil((due - today) / (1000 * 60 * 60 * 24));
+};
+
+function getCurrentDateString() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0"); // Months are 0-indexed
+  const day = String(today.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getFormattedLocalStorageSize(key) {
+  const item = localStorage.getItem(key);
+  if (item === null) {
+    return "N/A (No data found)";
+  }
+
+  // The length of the string is a good approximation of bytes for UTF-16 encoded strings (JavaScript default)
+  // For Base64 encoded data (like our compressed data), the length of the Base64 string is a good proxy.
+  const sizeInBytes = item.length; // For strings, length is roughly bytes
+
+  if (sizeInBytes < 1024) {
+    return `${sizeInBytes} Bytes`;
+  } else if (sizeInBytes < 1024 * 1024) {
+    return `${(sizeInBytes / 1024).toFixed(2)} KB`;
+  } else {
+    return `${(sizeInBytes / (1024 * 1024)).toFixed(2)} MB`;
+  }
+}
+
+/**
+ * Reads the application version from the meta tag and displays it
+ * in the designated elements within the Settings and Initial Setup modals.
+ */
+function displayAppVersion() {
+  let version = "N/A"; // Default version if meta tag is not found
+  try {
+    const versionMetaTag = document.querySelector(
+      'meta[name="application-version"]'
+    );
+    if (versionMetaTag) {
+      version = versionMetaTag.getAttribute("content");
+    } else {
+      console.warn("Application version meta tag not found.");
+    }
+  } catch (error) {
+    console.error("Error reading application version:", error);
+  }
+
+  const versionElementSettings = document.getElementById("appVersionSettings");
+  if (versionElementSettings) {
+    versionElementSettings.textContent = `Version: ${version}`;
+  }
+
+  const versionElementSetup = document.getElementById("appVersionSetup");
+  if (versionElementSetup) {
+    versionElementSetup.textContent = `Version: ${version}`;
+  }
+}
+
+// NEW UTILITY for modal category visibility
+function toggleCategoryVisibilityInModal(
+  selectElement,
+  categoryGroupId,
+  categorySelectId
+) {
+  const categoryGroup = document.getElementById(categoryGroupId);
+  const categorySelect = document.getElementById(categorySelectId);
+  // Attempt to find the description input by common names used in modals
+  const descriptionInput =
+    selectElement.form.elements["description"] ||
+    selectElement.form.elements["modalDescription"] ||
+    selectElement.form.elements["ccDescription"] ||
+    selectElement.form.elements["modalCcDescription"];
+
+  if (selectElement.value === "income") {
+    if (categoryGroup) categoryGroup.style.display = "none";
+    if (categorySelect) categorySelect.required = false;
+    if (descriptionInput) descriptionInput.placeholder = "e.g., Monthly Salary";
+  } else {
+    // 'expense'
+    if (categoryGroup) categoryGroup.style.display = "block";
+    if (categorySelect) categorySelect.required = true;
+    if (descriptionInput)
+      descriptionInput.placeholder = "e.g., Lunch, Groceries";
+  }
+}
+
+// --- INITIAL STATE & DEFAULTS ---
+let state = {};
+
+function getDefaultState() {
+  return JSON.parse(
+    JSON.stringify({
+      transactions: [],
+      accounts: [
+        {
+          id: "cash", // Cash ID remains the same
+          name: "Cash",
+          balance: 0,
+        },
+        {
+          id: "bank_1", // Generic ID
+          name: "Commercial", // Default display name
+          balance: 0,
+        },
+        {
+          id: "bank_2", // Generic ID
+          name: "HNB", // Default display name
+          balance: 0,
+        },
+        {
+          id: "bank_3", // Generic ID
+          name: "Genie", // Default display name
+          balance: 0,
+        },
+      ],
+      categories: [
+        // User's preferred list
+        "Food & Dining",
+        "Groceries",
+        "Transportation",
+        "Healthcare",
+        "Personal Care",
+        "Shopping",
+        "Entertainment",
+        "Education",
+        "Gifts & Donations",
+        "Travel",
+        "Subscriptions & Memberships",
+        "Bank Charges",
+        "Other",
+      ].sort((a, b) => a.localeCompare(b)),
+      debts: [],
+      receivables: [],
+      installments: [],
+      creditCard: {
+        limit: 0,
+        transactions: [],
+      },
+      settings: {
+        initialSetupDone: false,
+        showCcDashboardSection: true,
+        theme: "dark",
+      },
+    })
+  );
+}
+
+// --- INITIAL SETUP WIZARD LOGIC ---
+
+// Function to open and populate the initial setup wizard
+function openInitialSetupWizard() {
+  const modal = $("#initialSetupModal");
+  if (!modal) {
+    console.error("Initial Setup Modal not found in HTML.");
+    return;
+  }
+  console.log("Opening Initial Setup Wizard...");
+
+  const accountsContainer = $("#setupAccountBalances");
+  accountsContainer.innerHTML = "";
+  const defaultAccounts = getDefaultState().accounts;
+  defaultAccounts.forEach((acc) => {
+    const accRow = document.createElement("div");
+    accRow.className =
+      "grid grid-cols-1 sm:grid-cols-[2fr,3fr] gap-x-3 items-center mb-2";
+
+    let nameFieldHtml;
+    const inputStyle = `style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);"`;
+
+    if (acc.id === "cash") {
+      nameFieldHtml = `<label for="setupBalance-${acc.id}" class="text-sm font-medium text-gray-300 justify-self-start col-span-1 sm:col-span-1">${acc.name}</label>`;
+    } else {
+      nameFieldHtml = `<input type="text" id="setupName-${acc.id}" name="setupName-${acc.id}" value="${acc.name}" data-account-id="${acc.id}" class="!py-1.5 !px-2 text-sm w-full rounded placeholder-gray-400 col-span-1 sm:col-span-1" ${inputStyle} placeholder="Account Name">`;
+    }
+    const balanceFieldHtml = `<input type="number" id="setupBalance-${acc.id}" name="setupBalance-${acc.id}" data-account-id="${acc.id}" step="0.01" placeholder="0.00 (Optional)" class="!py-1.5 !px-2 text-sm w-full rounded placeholder-gray-400 col-span-1 sm:col-span-1" ${inputStyle}>`;
+
+    if (acc.id === "cash") {
+      accRow.innerHTML = `${nameFieldHtml}<div class="sm:col-span-1"> ${balanceFieldHtml}</div>`;
+    } else {
+      accRow.innerHTML = `<div class="col-span-1 sm:col-span-1">${nameFieldHtml}</div><div class="col-span-1 sm:col-span-1 mt-1 sm:mt-0">${balanceFieldHtml}</div>`;
+    }
+    accountsContainer.appendChild(accRow);
+  });
+
+  const setupEnableCcToggle = $("#setupEnableCc");
+  const setupCcLimitGroup = $("#setupCcLimitGroup");
+  const setupCcLimitInput = $("#setupCcLimit");
+  if (setupEnableCcToggle && setupCcLimitGroup && setupCcLimitInput) {
+    setupEnableCcToggle.checked = true;
+    setupCcLimitGroup.style.display = "block";
+    setupCcLimitInput.required = true;
+    setupCcLimitInput.style.backgroundColor = "var(--bg-secondary)";
+    setupCcLimitInput.style.borderColor = "var(--border-color)";
+    setupCcLimitInput.style.color = "var(--text-primary)";
+
+    setupEnableCcToggle.onchange = () => {
+      if (setupEnableCcToggle.checked) {
+        setupCcLimitGroup.style.display = "block";
+        setupCcLimitInput.required = true;
+      } else {
+        setupCcLimitGroup.style.display = "none";
+        setupCcLimitInput.required = false;
+        setupCcLimitInput.value = "";
+      }
+    };
+  }
+
+  const categoriesContainer = $("#setupCategoriesList");
+  const newCategoryInputForSetup = $("#setupNewCategoryName");
+  const addCategoryBtn = $("#setupAddCategoryBtn");
+  let currentSetupCategories = [...getDefaultState().categories];
+
+  if (newCategoryInputForSetup) {
+    newCategoryInputForSetup.style.backgroundColor = "var(--bg-secondary)";
+    newCategoryInputForSetup.style.borderColor = "var(--border-color)";
+    newCategoryInputForSetup.style.color = "var(--text-primary)";
+  }
+
+  const renderSetupCategories = () => {
+    if (!categoriesContainer) return;
+    categoriesContainer.innerHTML = "";
+    currentSetupCategories
+      .sort((a, b) => a.localeCompare(b))
+      .forEach((cat) => {
+        const div = document.createElement("div");
+        // MODIFIED: Removed bg-gray-600/50, added inline style for var(--bg-secondary)
+        div.className = "flex justify-between items-center p-2 rounded text-sm";
+        div.style.backgroundColor = "var(--bg-secondary)";
+        div.style.borderColor = "var(--border-color)"; // Optional: ensure border consistency
+        div.style.borderWidth = "1px"; // Optional: ensure border consistency
+
+        div.innerHTML = `
+              <span>${cat}</span>
+              <button type="button" class="text-red-400 hover:text-red-300 text-xs ml-2" data-category-name="${cat}" title="Remove">
                   <i class="fas fa-times"></i>
               </button>
-          `,t.querySelector("button").onclick=e=>{let t=e.currentTarget.dataset.categoryName;c=c.filter(e=>e!==t),d()},r.appendChild(t)}))};l&&(l.onclick=()=>{let e=s.value.trim();e&&!c.some(t=>t.toLowerCase()===e.toLowerCase())?(c.push(e),d(),s.value=""):e&&showNotification(`Category "${e}" already exists.`,"warning"),s.focus()}),s&&(s.onkeypress=e=>{"Enter"===e.key&&(e.preventDefault(),l&&l.click())}),d(),$("#initialSetupForm").onsubmit=handleInitialSetupSubmit,$("#setupImportInput").onchange=handleSetupImport,e.style.display="block",displayAppVersion()}function handleInitialSetupSubmit(e){e.preventDefault(),console.log("Handling initial setup form submission...");let t=getDefaultState(),a=getDefaultState().accounts;t.accounts=a.map(e=>{let t=$(`#setupName-${e.id}`),a=$(`#setupBalance-${e.id}`),n=e.name;if("cash"!==e.id&&t){let o=t.value.trim();o?n=o:console.warn(`Account name for ${e.id} was left empty, using default: ${e.name}`)}let i=0;if(a){let r=a.value.trim();if(""!==r&&null!==r){let s=parseFloat(r);i=isNaN(s)?0:s}}return{id:e.id,name:n,balance:i}});let n=$("#setupEnableCc").checked;if(t.settings.showCcDashboardSection=n,n){let o=$("#setupCcLimit").value.trim();if(""===o||null===o)t.creditCard.limit=0;else{let i=parseFloat(o);t.creditCard.limit=isNaN(i)||i<0?0:i}}else t.creditCard.limit=0;let r=[];$$("#setupCategoriesList span").forEach(e=>r.push(e.textContent)),t.categories=r.length>0?r.sort((e,t)=>e.localeCompare(t)):getDefaultState().categories,t.settings.initialSetupDone=!0,state=t,saveData(),closeModal("initialSetupModal"),initializeUI(!0),showNotification("Setup complete! Welcome to Kaasi.","success",5e3)}function handleSetupImport(e){let t=e.target.files[0];if(!t)return;console.log("Importing data from setup wizard...");let a=new FileReader;a.onload=t=>{let a;try{if((a=JSON.parse(t.target.result))&&"object"==typeof a)state=getDefaultState(),(state=deepMerge(state,a)).settings||(state.settings=getDefaultState().settings),state.settings.initialSetupDone=!0,saveData(),closeModal("initialSetupModal"),initializeUI(!0),showNotification("Data imported successfully from setup wizard!","success");else throw Error("Invalid data structure in imported file.")}catch(n){console.error("Import failed during setup:",n),showNotification(`Import failed: ${n.message}. Please try manual setup or a valid file.`,"error",1e4)}finally{e.target.value=null}},a.onerror=()=>{showNotification("Failed to read the import file.","error"),e.target.value=null},a.readAsText(t)}const STORAGE_KEY="KaasiData";function saveData(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state)),console.log("Data saved successfully.")}catch(e){console.error("Error saving data to localStorage:",e),"QuotaExceededError"===e.name?showNotification("Error: Local storage quota exceeded. Data is too large to save.","error",1e4):showNotification("Error saving data. Check console.","error",1e4)}}function loadData(){let e=localStorage.getItem(STORAGE_KEY),t=null;if(e){console.log("Uncompressed data found. Attempting to parse...");try{t=JSON.parse(e)}catch(a){console.error("Error parsing data from localStorage:",a),showNotification("Error loading data. Data might be corrupted. Starting fresh.","error",8e3)}}state=getDefaultState(),t&&"object"==typeof t?(console.log("Merging loaded data into default state structure..."),state=deepMerge(state,t),console.log("Data merged successfully.")):e&&!t?console.log("Previous data existed but was unparsable. Using fresh default state."):console.log("No saved data found or data was null/invalid. Starting with fresh default state.");let n=getDefaultState();if(state.settings&&"object"==typeof state.settings)for(let o in n.settings)void 0===state.settings[o]&&(state.settings[o]=n.settings[o]);else console.warn("State.settings was missing or invalid after merge. Resetting to default settings structure."),state.settings={...n.settings};if(state.creditCard&&"object"==typeof state.creditCard){for(let i in n.creditCard)void 0===state.creditCard[i]&&(state.creditCard[i]=n.creditCard[i]);Array.isArray(state.creditCard.transactions)||(state.creditCard.transactions=[])}else console.warn("State.creditCard was missing or invalid after merge. Resetting to default creditCard structure."),state.creditCard={...n.creditCard},Array.isArray(state.creditCard.transactions)||(state.creditCard.transactions=[]);Array.isArray(state.transactions)||(state.transactions=[]),Array.isArray(state.accounts)||(state.accounts=[]),Array.isArray(state.categories)||(state.categories=[]),Array.isArray(state.debts)||(state.debts=[]),Array.isArray(state.receivables)||(state.receivables=[]),Array.isArray(state.installments)||(state.installments=[]),ensureDefaultAccounts(),ensureDefaultCategories(),state.accounts.forEach(e=>{(isNaN(e.balance)||"number"!=typeof e.balance)&&(e.balance=0)}),(isNaN(state.creditCard.limit)||"number"!=typeof state.creditCard.limit)&&(state.creditCard.limit=0),state.creditCard.transactions.forEach(e=>{(void 0===e.paidAmount||"number"!=typeof e.paidAmount)&&(e.paidAmount=0),void 0===e.paidOff&&(e.paidOff=e.paidAmount>=e.amount-.005),e.timestamp||(e.timestamp=new Date(e.date).getTime())}),state.transactions.forEach(e=>{e.timestamp||(e.timestamp=new Date(e.date).getTime())}),state.debts.forEach(e=>{e.timestamp||(e.timestamp=new Date(e.dueDate).getTime()),void 0===e.originalAmount&&(e.originalAmount=e.amount)}),state.receivables.forEach(e=>{e.timestamp||(e.timestamp=new Date(e.dateGiven).getTime()),void 0===e.originalAmount&&(e.originalAmount=e.amount)}),state.installments.forEach(e=>{e.timestamp||(e.timestamp=new Date(e.startDate).getTime())}),console.log("Final state after loadData and integrity checks:",JSON.parse(JSON.stringify(state)))}function deepMerge(e,t){for(let a in t)if(t.hasOwnProperty(a)){let n=t[a],o=e[a];n&&"object"==typeof n&&!Array.isArray(n)?((!o||"object"!=typeof o||Array.isArray(o))&&(e[a]={}),deepMerge(e[a],n)):void 0!==n&&(e[a]=n)}return e}function ensureDefaultAccounts(){let e=getDefaultState().accounts;if(!Array.isArray(state.accounts)){console.warn("state.accounts was not an array. Resetting to default accounts structure."),state.accounts=JSON.parse(JSON.stringify(e)),state.accounts.forEach(e=>e.balance=0);return}e.forEach(e=>{let t=state.accounts.find(t=>t.id===e.id);t?("string"!=typeof t.name&&(t.name=e.name),("number"!=typeof t.balance||isNaN(t.balance))&&(console.warn(`Balance for account '${t.name}' was invalid. Resetting to 0.`),t.balance=0)):(console.warn(`Default account '${e.name}' (ID: ${e.id}) was missing. Adding it.`),state.accounts.push({...e,balance:0}))})}function ensureDefaultCategories(){let e=getDefaultState().categories;state.categories&&Array.isArray(state.categories)||(console.warn("state.categories was missing or not an array. Initializing as empty array."),state.categories=[]),0===state.categories.length&&(console.warn("state.categories is empty. Populating with default categories."),state.categories=JSON.parse(JSON.stringify(e))),state.categories.sort((e,t)=>e.localeCompare(t));let t="Other";state.categories.some(e=>e.toLowerCase()===t.toLowerCase())||(console.warn("'Other' category was missing. Adding it back."),state.categories.push(t),state.categories.sort((e,t)=>e.localeCompare(t)))}function showNotification(e,t="success",a=4e3){let n=$("#notificationArea");if(!n)return;let o=document.createElement("div"),i,r;switch(t){case"error":i="bg-red-600",r="text-white";break;case"warning":i="bg-yellow-500",r="text-black";break;case"info":i="bg-blue-500",r="text-white";break;default:i="bg-green-600",r="text-white"}o.className=`p-3 rounded-md shadow-lg text-sm font-medium transition-all duration-300 ease-in-out transform translate-x-full opacity-0 ${i} ${r}`,o.textContent=e,n.appendChild(o),o.offsetWidth,requestAnimationFrame(()=>{o.classList.remove("translate-x-full","opacity-0"),o.classList.add("translate-x-0","opacity-100")}),setTimeout(()=>{o.classList.remove("translate-x-0","opacity-100"),o.classList.add("translate-x-full","opacity-0"),o.addEventListener("transitionend",()=>o.remove(),{once:!0})},a)}function populateDropdowns(){let e=$$('select[name="account"], select[name="transferFrom"], select[name="transferTo"], select[name="receivableSourceAccount"], select[name="payDebtAccount"], select[name="recPaymentAccount"], select[name="instPayAccount"], select[name="ccPayFromAccount"], #modalAccount, #recSourceAccountAdd, #recSourceAccountEdit, #modalCcPayFromAccount, #modalInstPayAccount, #modalPayDebtAccount'),t=$$("#category, #modalCategory, #modalPayDebtCategory, #modalInstPayCategory, #modalCcPayCategory");e.forEach(e=>{if(!e)return;let t=e.value;e.innerHTML="",state.accounts.forEach(t=>{let a=document.createElement("option");a.value=t.id,a.textContent=`${t.name} (${formatCurrency(t.balance)})`,e.appendChild(a)}),Array.from(e.options).some(e=>e.value===t)?e.value=t:e.options.length});let a=e=>{if(!e)return;let t=e.value;e.innerHTML="";let a=document.createElement("option");a.value="",a.textContent="---- Select Category ----",a.disabled=!0,e.appendChild(a);let n="Other",o=state.categories.filter(e=>"income"!==e.toLowerCase()&&"credit card payment"!==e.toLowerCase()&&e.toLowerCase()!==n.toLowerCase());if(o.sort((e,t)=>e.localeCompare(t)),"modalPayDebtCategory"===e.id){let i="Debt Repayment";o.includes(i)||state.categories.some(e=>e.toLowerCase()===i.toLowerCase())}if(o.forEach(t=>{let a=document.createElement("option");a.value=t,a.textContent=t,e.appendChild(a)}),state.categories.some(e=>e.toLowerCase()===n.toLowerCase())){let r=document.createElement("option");r.value=n,r.textContent=n,e.appendChild(r)}t&&Array.from(e.options).some(e=>e.value===t&&""!==e.value)?e.value=t:"modalPayDebtCategory"===e.id&&state.categories.includes("Debt Repayment")?e.value="Debt Repayment":e.value=""};t.forEach(a)}function renderDashboard(){let e=0;state.accounts.forEach(t=>{let a=$(`#accountBalance-${t.id}`);if(a){let n=a.querySelector("p:first-child"),o=a.querySelector("p:last-child");n&&(n.textContent=t.name),o&&(o.textContent=formatCurrency(t.balance))}e+=t.balance}),$("#totalBalance").textContent=formatCurrency(e);let t=state.receivables.filter(e=>"cash"===e.type||"cc"===e.type&&e.sourceAccount).reduce((e,t)=>e+t.remainingAmount,0);$("#totalPotentialBalance").textContent=formatCurrency(e+t),$("#totalOwedToMe").textContent=`Total: ${formatCurrency(state.receivables.reduce((e,t)=>e+t.remainingAmount,0))}`,$("#totalOwed").textContent=`Total: ${formatCurrency(state.debts.reduce((e,t)=>e+t.remainingAmount,0))}`,$("#totalInstallmentsLeft").textContent=`Total Left: ${formatCurrency(state.installments.reduce((e,t)=>e+t.monthlyAmount*t.monthsLeft,0))}`,renderRecentTransactions(),renderDebtList(),renderReceivableList(),renderInstallmentList(),renderCreditCardSection(),renderMonthlyOverviewChart(),renderYearlyAndQuickStats()}function renderYearlyAndQuickStats(){let e=new Date,t=e.getFullYear(),a=new Date(t,0,1),n=new Date(e);n.setDate(e.getDate()-e.getDay()+(0===e.getDay()?-6:1)),n.setHours(0,0,0,0);let o=new Date(e);o.setHours(0,0,0,0);let i=new Date(o);i.setDate(o.getDate()-1);let r=new Date(n);r.setDate(n.getDate()-7);let s=new Date(n);s.setDate(n.getDate()-1),s.setHours(23,59,59,999);let l=0,c=0,d=0,u=0,m=0,p=0;state.transactions.forEach(e=>{let t=new Date(e.date);!isNaN(t.getTime())&&(t>=a&&("income"===e.type&&(l+=e.amount),"expense"===e.type&&(c+=e.amount)),"expense"===e.type&&(t>=n&&(d+=e.amount),t>=o&&(u+=e.amount),t>=i&&t<o&&(m+=e.amount),t>=r&&t<=s&&(p+=e.amount)))}),$("#yearlyTotals").textContent=`Yearly: Earned ${formatCurrency(l)} / Spent ${formatCurrency(c)}`;let f=$("#quickStats");f.innerHTML=`Today: ${formatCurrency(u)} <span id="todaySpendingIndicator"></span> | This Week: ${formatCurrency(d)} <span id="weekSpendingIndicator"></span>`;let g=$("#todaySpendingIndicator");u>m&&m>=0?g.innerHTML=`<i class="fas fa-arrow-up text-indicator-bad spending-indicator" title="More than yesterday (${formatCurrency(m)})"></i>`:u<m&&m>0?g.innerHTML=`<i class="fas fa-arrow-down text-indicator-good spending-indicator" title="Less than yesterday (${formatCurrency(m)})"></i>`:g.innerHTML="";let y=$("#weekSpendingIndicator");d>p&&p>=0?y.innerHTML=`<i class="fas fa-arrow-up text-indicator-bad spending-indicator" title="More than last week (${formatCurrency(p)})"></i>`:d<p&&p>0?y.innerHTML=`<i class="fas fa-arrow-down text-indicator-good spending-indicator" title="Less than last week (${formatCurrency(p)})"></i>`:y.innerHTML=""}function renderRecentTransactions(){let e=$("#recentTransactionsList");if(!e)return;e.innerHTML="";let t=[...state.transactions].sort((e,t)=>new Date(t.date).setHours(0,0,0,0)-new Date(e.date).setHours(0,0,0,0)||t.timestamp-e.timestamp).slice(0,10);if(0===t.length){e.innerHTML='<p class="text-gray-400 text-sm">No transactions yet.</p>';return}t.forEach(t=>{let a=document.createElement("div");a.className="flex justify-between items-center p-2 rounded bg-gray-700/50 text-sm transition-colors hover:bg-gray-700/80";let n=state.accounts.find(e=>e.id===t.account),o=n?n.name:"Unknown",i="income"===t.type,r=i?"text-income":"text-expense",s=i?"":`(${t.category||"Uncategorized"})`;a.innerHTML=`
+          `;
+        div.querySelector("button").onclick = (e) => {
+          const catNameToRemove = e.currentTarget.dataset.categoryName;
+          currentSetupCategories = currentSetupCategories.filter(
+            (c) => c !== catNameToRemove
+          );
+          renderSetupCategories();
+        };
+        categoriesContainer.appendChild(div);
+      });
+  };
+
+  if (addCategoryBtn) {
+    addCategoryBtn.onclick = () => {
+      const newCat = newCategoryInputForSetup.value.trim();
+      if (
+        newCat &&
+        !currentSetupCategories.some(
+          (c) => c.toLowerCase() === newCat.toLowerCase()
+        )
+      ) {
+        currentSetupCategories.push(newCat);
+        renderSetupCategories();
+        newCategoryInputForSetup.value = "";
+      } else if (newCat) {
+        showNotification(`Category "${newCat}" already exists.`, "warning");
+      }
+      newCategoryInputForSetup.focus();
+    };
+  }
+  if (newCategoryInputForSetup) {
+    newCategoryInputForSetup.onkeypress = (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (addCategoryBtn) addCategoryBtn.click();
+      }
+    };
+  }
+  renderSetupCategories(); // Initial call
+
+  $("#initialSetupForm").onsubmit = handleInitialSetupSubmit;
+  $("#setupImportInput").onchange = handleSetupImport;
+
+  modal.style.display = "block";
+  displayAppVersion();
+}
+
+// Function to handle the submission of the manual setup form
+function handleInitialSetupSubmit(event) {
+  event.preventDefault();
+  console.log("Handling initial setup form submission...");
+
+  let newState = getDefaultState(); // Start with a fresh default state structure
+
+  // 1. Update Account Names and Balances
+  // Iterate based on the structure of defaultAccounts to ensure order and all defaults are considered
+  const defaultAccountsFromTemplate = getDefaultState().accounts;
+
+  newState.accounts = defaultAccountsFromTemplate.map((defaultAcc) => {
+    const nameInput = $(`#setupName-${defaultAcc.id}`); // For editable names
+    const balanceInput = $(`#setupBalance-${defaultAcc.id}`);
+
+    let finalName = defaultAcc.name; // Default to original name
+    if (defaultAcc.id !== "cash" && nameInput) {
+      // If it's an editable account and the input exists
+      const enteredName = nameInput.value.trim();
+      if (enteredName) {
+        // If user provided a name
+        finalName = enteredName;
+      } else {
+        console.warn(
+          `Account name for ${defaultAcc.id} was left empty, using default: ${defaultAcc.name}`
+        );
+        // Keep finalName as defaultAcc.name
+      }
+    }
+
+    let balance = 0; // Default balance to 0
+    if (balanceInput) {
+      const balanceStr = balanceInput.value.trim();
+      if (balanceStr !== "" && balanceStr !== null) {
+        const parsedBalance = parseFloat(balanceStr);
+        balance = isNaN(parsedBalance) ? 0 : parsedBalance;
+      }
+    }
+    // Return a new object for the account, preserving its original ID
+    return { id: defaultAcc.id, name: finalName, balance: balance };
+  });
+
+  // 2. Update Credit Card Settings
+  const ccEnabled = $("#setupEnableCc").checked;
+  newState.settings.showCcDashboardSection = ccEnabled; // This should already be part of newState.settings from getDefaultState()
+  if (ccEnabled) {
+    const ccLimitStr = $("#setupCcLimit").value.trim();
+    if (ccLimitStr === "" || ccLimitStr === null) {
+      newState.creditCard.limit = 0;
+    } else {
+      const limit = parseFloat(ccLimitStr);
+      newState.creditCard.limit = isNaN(limit) || limit < 0 ? 0 : limit;
+    }
+  } else {
+    newState.creditCard.limit = 0;
+  }
+
+  // 3. Update Categories
+  const finalCategories = [];
+  $$("#setupCategoriesList span").forEach((span) =>
+    finalCategories.push(span.textContent)
+  );
+  newState.categories =
+    finalCategories.length > 0
+      ? finalCategories.sort((a, b) => a.localeCompare(b))
+      : getDefaultState().categories;
+
+  // 4. Mark setup as done
+  newState.settings.initialSetupDone = true;
+
+  // 5. Replace the global state with the new state from setup
+  state = newState;
+
+  // 6. Save data
+  saveData();
+
+  // 7. Close wizard and initialize main app UI
+  closeModal("initialSetupModal");
+  initializeUI(true);
+
+  showNotification("Setup complete! Welcome to Kaasi.", "success", 5000);
+}
+
+// Function to handle data import from within the setup wizard
+function handleSetupImport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  console.log("Importing data from setup wizard...");
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    let importedData;
+    try {
+      importedData = JSON.parse(e.target.result);
+      if (importedData && typeof importedData === "object") {
+        state = getDefaultState();
+        state = deepMerge(state, importedData);
+
+        if (!state.settings) state.settings = getDefaultState().settings;
+        state.settings.initialSetupDone = true;
+
+        saveData();
+        closeModal("initialSetupModal");
+        initializeUI(true);
+        showNotification(
+          "Data imported successfully from setup wizard!",
+          "success"
+        );
+      } else {
+        throw new Error("Invalid data structure in imported file.");
+      }
+    } catch (error) {
+      console.error("Import failed during setup:", error);
+      showNotification(
+        `Import failed: ${error.message}. Please try manual setup or a valid file.`,
+        "error",
+        10000
+      );
+    } finally {
+      event.target.value = null;
+    }
+  };
+  reader.onerror = () => {
+    showNotification("Failed to read the import file.", "error");
+    event.target.value = null;
+  };
+  reader.readAsText(file);
+}
+
+// --- LOCAL STORAGE ---
+const STORAGE_KEY = "KaasiData"; // Reverted to original key
+
+function saveData() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    console.log("Data saved successfully.");
+  } catch (e) {
+    console.error("Error saving data to localStorage:", e);
+    if (e.name === "QuotaExceededError") {
+      showNotification(
+        "Error: Local storage quota exceeded. Data is too large to save.",
+        "error",
+        10000
+      );
+    } else {
+      // This could be a different error, like data being non-serializable
+      // (though less likely if it worked before compression)
+      showNotification("Error saving data. Check console.", "error", 10000);
+    }
+    // It's helpful to log the state if stringify itself is the problem,
+    // but QuotaExceededError happens after stringify.
+    // console.error("Full state object that potentially failed to save:", state);
+  }
+}
+
+function loadData() {
+  const d = localStorage.getItem(STORAGE_KEY); // Try loading uncompressed data
+  let parsedData = null;
+
+  if (d) {
+    console.log("Uncompressed data found. Attempting to parse...");
+    try {
+      parsedData = JSON.parse(d);
+    } catch (e) {
+      console.error("Error parsing data from localStorage:", e);
+      // ParsedData will remain null, leading to fresh state initialization
+      showNotification(
+        "Error loading data. Data might be corrupted. Starting fresh.",
+        "error",
+        8000
+      );
+    }
+  }
+
+  // Start with a fresh default state structure.
+  // This ensures that 'state' always has the correct top-level keys.
+  state = getDefaultState();
+
+  // If parsedData exists and is an object, merge it into the fresh default state
+  if (parsedData && typeof parsedData === "object") {
+    console.log("Merging loaded data into default state structure...");
+    // Use the corrected deepMerge. 'state' (which is a fresh default) is the target.
+    // 'parsedData' (loaded data) is the source.
+    // This will recursively add/update properties from parsedData into state.
+    state = deepMerge(state, parsedData);
+    console.log("Data merged successfully.");
+  } else if (d && !parsedData) {
+    // Data existed but failed to parse
+    console.log(
+      "Previous data existed but was unparsable. Using fresh default state."
+    );
+    // state is already getDefaultState() at this point, so no further action needed here.
+  } else {
+    console.log(
+      "No saved data found or data was null/invalid. Starting with fresh default state."
+    );
+    // state is already getDefaultState().
+  }
+
+  // After merging or starting fresh, explicitly ensure essential nested objects and their
+  // default properties are correctly initialized if they are still missing or invalid.
+  // This is a safeguard against malformed loaded data or if getDefaultState() was incomplete for nested parts.
+
+  const defaultStateTemplate = getDefaultState(); // Get a fresh template for comparison
+
+  // Ensure 'settings' object and its properties exist
+  if (!state.settings || typeof state.settings !== "object") {
+    console.warn(
+      "State.settings was missing or invalid after merge. Resetting to default settings structure."
+    );
+    state.settings = { ...defaultStateTemplate.settings }; // Create a new settings object from default
+  } else {
+    // Ensure all specific default settings properties exist within state.settings
+    for (const settingKey in defaultStateTemplate.settings) {
+      if (state.settings[settingKey] === undefined) {
+        state.settings[settingKey] = defaultStateTemplate.settings[settingKey];
+      }
+    }
+  }
+
+  // Ensure 'creditCard' object and its properties exist
+  if (!state.creditCard || typeof state.creditCard !== "object") {
+    console.warn(
+      "State.creditCard was missing or invalid after merge. Resetting to default creditCard structure."
+    );
+    state.creditCard = { ...defaultStateTemplate.creditCard }; // Create a new creditCard object
+    if (!Array.isArray(state.creditCard.transactions)) {
+      // Ensure transactions array is initialized
+      state.creditCard.transactions = [];
+    }
+  } else {
+    // Ensure all specific default creditCard properties exist
+    for (const ccKey in defaultStateTemplate.creditCard) {
+      if (state.creditCard[ccKey] === undefined) {
+        state.creditCard[ccKey] = defaultStateTemplate.creditCard[ccKey];
+      }
+    }
+    if (!Array.isArray(state.creditCard.transactions)) {
+      // Ensure transactions is an array
+      state.creditCard.transactions = [];
+    }
+  }
+
+  // Ensure top-level arrays are at least initialized if they somehow got removed or were not in old data.
+  // Note: getDefaultState() already initializes these, and deepMerge should preserve them if present in source.
+  // This is more of a final sanity check.
+  if (!Array.isArray(state.transactions)) state.transactions = [];
+  if (!Array.isArray(state.accounts)) state.accounts = []; // ensureDefaultAccounts will handle content
+  if (!Array.isArray(state.categories)) state.categories = []; // ensureDefaultCategories will handle content
+  if (!Array.isArray(state.debts)) state.debts = [];
+  if (!Array.isArray(state.receivables)) state.receivables = [];
+  if (!Array.isArray(state.installments)) state.installments = [];
+
+  // Existing data integrity checks (important to keep)
+  ensureDefaultAccounts();
+  ensureDefaultCategories();
+
+  state.accounts.forEach((a) => {
+    if (isNaN(a.balance) || typeof a.balance !== "number") a.balance = 0;
+  });
+
+  if (
+    isNaN(state.creditCard.limit) ||
+    typeof state.creditCard.limit !== "number"
+  )
+    state.creditCard.limit = 0;
+  state.creditCard.transactions.forEach((t) => {
+    if (t.paidAmount === undefined || typeof t.paidAmount !== "number")
+      t.paidAmount = 0;
+    if (t.paidOff === undefined) t.paidOff = t.paidAmount >= t.amount - 0.005;
+    if (!t.timestamp) t.timestamp = new Date(t.date).getTime();
+  });
+
+  state.transactions.forEach((t) => {
+    if (!t.timestamp) t.timestamp = new Date(t.date).getTime();
+  });
+
+  state.debts.forEach((item) => {
+    if (!item.timestamp) item.timestamp = new Date(item.dueDate).getTime();
+    if (item.originalAmount === undefined) item.originalAmount = item.amount;
+  });
+
+  state.receivables.forEach((item) => {
+    if (!item.timestamp) item.timestamp = new Date(item.dateGiven).getTime();
+    if (item.originalAmount === undefined) item.originalAmount = item.amount;
+  });
+
+  state.installments.forEach((item) => {
+    if (!item.timestamp) item.timestamp = new Date(item.startDate).getTime();
+  });
+
+  console.log(
+    "Final state after loadData and integrity checks:",
+    JSON.parse(JSON.stringify(state))
+  );
+}
+
+function deepMerge(target, source) {
+  // Iterate over the properties of the source object
+  for (const key in source) {
+    if (source.hasOwnProperty(key)) {
+      const sourceValue = source[key];
+      const targetValue = target[key];
+
+      if (
+        sourceValue &&
+        typeof sourceValue === "object" &&
+        !Array.isArray(sourceValue)
+      ) {
+        // If the source property is an object (and not an array), recurse
+        // Ensure the target property is also an object to merge into;
+        // if not, or if it doesn't exist, initialize it as an empty object.
+        if (
+          !targetValue ||
+          typeof targetValue !== "object" ||
+          Array.isArray(targetValue)
+        ) {
+          target[key] = {};
+        }
+        deepMerge(target[key], sourceValue); // Merge into the target's object property
+      } else if (sourceValue !== undefined) {
+        // If the source property is a primitive, an array, or explicitly undefined (to overwrite),
+        // assign it directly to the target.
+        target[key] = sourceValue;
+      }
+      // If sourceValue is undefined, we don't do anything, preserving targetValue
+    }
+  }
+  // The problematic loop that added all default top-level keys into sub-objects has been removed.
+  return target; // Return the modified target object
+}
+
+function ensureDefaultAccounts() {
+  const defaultAccounts = getDefaultState().accounts; // Get a fresh copy of default accounts
+  if (!Array.isArray(state.accounts)) {
+    // If state.accounts is not an array, reset it
+    console.warn(
+      "state.accounts was not an array. Resetting to default accounts structure."
+    );
+    state.accounts = JSON.parse(JSON.stringify(defaultAccounts)); // Deep copy
+    // Initialize balances to 0 for all default accounts if resetting
+    state.accounts.forEach((acc) => (acc.balance = 0));
+    return;
+  }
+
+  // Ensure all default accounts exist in the state
+  defaultAccounts.forEach((defaultAcc) => {
+    const existingAccount = state.accounts.find(
+      (acc) => acc.id === defaultAcc.id
+    );
+    if (!existingAccount) {
+      // If a default account is missing, add it with a balance of 0
+      console.warn(
+        `Default account '${defaultAcc.name}' (ID: ${defaultAcc.id}) was missing. Adding it.`
+      );
+      state.accounts.push({
+        ...defaultAcc, // Spread default properties like id and name
+        balance: 0, // Initialize balance to 0
+      });
+    } else {
+      // If account exists, ensure essential properties are correct
+      if (typeof existingAccount.name !== "string")
+        existingAccount.name = defaultAcc.name;
+      if (
+        typeof existingAccount.balance !== "number" ||
+        isNaN(existingAccount.balance)
+      ) {
+        console.warn(
+          `Balance for account '${existingAccount.name}' was invalid. Resetting to 0.`
+        );
+        existingAccount.balance = 0;
+      }
+    }
+  });
+
+  // Optional: Remove any accounts in state that are not in the default list
+  // This might be too aggressive if users can create custom accounts.
+  // For now, we'll just ensure default ones are present and valid.
+}
+
+function ensureDefaultCategories() {
+  const defaultCategories = getDefaultState().categories; // Get the app's default list
+
+  // If state.categories doesn't exist or is not an array, initialize it as an empty array.
+  if (!state.categories || !Array.isArray(state.categories)) {
+    console.warn(
+      "state.categories was missing or not an array. Initializing as empty array."
+    );
+    state.categories = [];
+  }
+
+  // Only populate with default categories if the user's category list is currently empty.
+  // This allows users to delete default categories and not have them reappear,
+  // as long as they have at least one category remaining.
+  // If they delete ALL categories, then the defaults will be restored on next load.
+  if (state.categories.length === 0) {
+    console.warn(
+      "state.categories is empty. Populating with default categories."
+    );
+    state.categories = JSON.parse(JSON.stringify(defaultCategories)); // Deep copy defaults
+  }
+  // Always ensure categories are sorted for consistent display.
+  state.categories.sort((a, b) => a.localeCompare(b));
+
+  // The "Other" category is special and should always exist.
+  // The deleteCategory function already prevents its deletion.
+  // We can add a check here to ensure it's present if it somehow got removed
+  // and the list wasn't empty (though deleteCategory should prevent this).
+  const otherCategory = "Other";
+  if (
+    !state.categories.some(
+      (cat) => cat.toLowerCase() === otherCategory.toLowerCase()
+    )
+  ) {
+    console.warn("'Other' category was missing. Adding it back.");
+    state.categories.push(otherCategory);
+    state.categories.sort((a, b) => a.localeCompare(b)); // Re-sort
+  }
+}
+
+// --- NOTIFICATIONS ---
+function showNotification(message, type = "success", duration = 4000) {
+  const area = $("#notificationArea");
+  if (!area) return;
+  const n = document.createElement("div");
+  let bg, tc;
+  switch (type) {
+    case "error":
+      bg = "bg-red-600";
+      tc = "text-white";
+      break;
+    case "warning":
+      bg = "bg-yellow-500";
+      tc = "text-black";
+      break;
+    case "info":
+      bg = "bg-blue-500";
+      tc = "text-white";
+      break;
+    default:
+      bg = "bg-green-600";
+      tc = "text-white";
+      break;
+  }
+  n.className = `p-3 rounded-md shadow-lg text-sm font-medium transition-all duration-300 ease-in-out transform translate-x-full opacity-0 ${bg} ${tc}`;
+  n.textContent = message;
+  area.appendChild(n);
+  void n.offsetWidth;
+  requestAnimationFrame(() => {
+    n.classList.remove("translate-x-full", "opacity-0");
+    n.classList.add("translate-x-0", "opacity-100");
+  });
+  setTimeout(() => {
+    n.classList.remove("translate-x-0", "opacity-100");
+    n.classList.add("translate-x-full", "opacity-0");
+    n.addEventListener("transitionend", () => n.remove(), {
+      once: true,
+    });
+  }, duration);
+}
+
+// --- RENDERING FUNCTIONS (Core) ---
+function populateDropdowns() {
+  const accountSelects = $$(
+    'select[name="account"], select[name="transferFrom"], select[name="transferTo"], select[name="receivableSourceAccount"], select[name="payDebtAccount"], select[name="recPaymentAccount"], select[name="instPayAccount"], select[name="ccPayFromAccount"], #modalAccount, #recSourceAccountAdd, #recSourceAccountEdit, #modalCcPayFromAccount, #modalInstPayAccount, #modalPayDebtAccount'
+  );
+  const categorySelects = $$(
+    "#category, #modalCategory, #modalPayDebtCategory, #modalInstPayCategory, #modalCcPayCategory"
+  );
+
+  accountSelects.forEach((s) => {
+    if (!s) return;
+    const currentValue = s.value;
+    s.innerHTML = ""; // Clear existing options
+    state.accounts.forEach((a) => {
+      const o = document.createElement("option");
+      o.value = a.id;
+      o.textContent = `${a.name} (${formatCurrency(a.balance)})`;
+      s.appendChild(o);
+    });
+    // Try to reselect the previous value if it still exists
+    if (Array.from(s.options).some((opt) => opt.value === currentValue)) {
+      s.value = currentValue;
+    } else if (s.options.length > 0) {
+      // If previous value is gone, and there are options, select the first one
+      // You might want to reconsider this default behavior if a placeholder is preferred for accounts too
+      // s.value = s.options[0].value;
+    }
+  });
+
+  const populateCategorySelect = (selectEl) => {
+    if (!selectEl) return;
+    const currentValue = selectEl.value; // Store current value before clearing
+    selectEl.innerHTML = ""; // Clear existing options
+
+    // Add a disabled, selected placeholder option
+    const placeholderOption = document.createElement("option");
+    placeholderOption.value = ""; // Empty value for placeholder
+    placeholderOption.textContent = "---- Select Category ----";
+    placeholderOption.disabled = true;
+    // placeholderOption.selected = true; // Set selected by default
+    selectEl.appendChild(placeholderOption);
+
+    // Filter out "Income" and "Credit Card Payment" for general expense categories,
+    // and separate "Other" to add it at the end.
+    const otherCategoryName = "Other";
+    let generalCategories = state.categories.filter(
+      (c) =>
+        c.toLowerCase() !== "income" &&
+        c.toLowerCase() !== "credit card payment" &&
+        c.toLowerCase() !== otherCategoryName.toLowerCase()
+    );
+
+    // Sort general categories alphabetically
+    generalCategories.sort((a, b) => a.localeCompare(b));
+
+    // Special handling for specific dropdowns like debt repayment
+    if (selectEl.id === "modalPayDebtCategory") {
+      const debtRepaymentCategory = "Debt Repayment";
+      if (
+        !generalCategories.includes(debtRepaymentCategory) &&
+        !state.categories.some(
+          (c) => c.toLowerCase() === debtRepaymentCategory.toLowerCase()
+        )
+      ) {
+        // If "Debt Repayment" is not in general and not in original state.categories (meaning user didn't add it)
+        // we might not want to force-add it here unless it's a fixed option.
+        // For now, let's assume if it's not in state.categories, it's not an option.
+        // If "Debt Repayment" should ALWAYS be an option for this dropdown, it needs to be handled differently.
+      }
+    }
+
+    // Add sorted general categories
+    generalCategories.forEach((c) => {
+      const o = document.createElement("option");
+      o.value = c;
+      o.textContent = c;
+      selectEl.appendChild(o);
+    });
+
+    // Add "Other" category at the end, if it exists in the state
+    if (
+      state.categories.some(
+        (c) => c.toLowerCase() === otherCategoryName.toLowerCase()
+      )
+    ) {
+      const otherOption = document.createElement("option");
+      otherOption.value = otherCategoryName;
+      otherOption.textContent = otherCategoryName;
+      selectEl.appendChild(otherOption);
+    }
+
+    // Try to reselect the previous value if it still exists and is valid
+    if (
+      currentValue &&
+      Array.from(selectEl.options).some(
+        (opt) => opt.value === currentValue && opt.value !== ""
+      )
+    ) {
+      selectEl.value = currentValue;
+    } else if (
+      selectEl.id === "modalPayDebtCategory" &&
+      state.categories.includes("Debt Repayment")
+    ) {
+      // Default for debt payment if "Debt Repayment" category exists
+      selectEl.value = "Debt Repayment";
+    } else {
+      // If no valid previous selection, make the placeholder selected
+      selectEl.value = ""; // This will select the placeholder
+    }
+  };
+
+  categorySelects.forEach(populateCategorySelect);
+}
+
+function renderDashboard() {
+  let totalBalance = 0;
+  state.accounts.forEach((acc) => {
+    const cEl = $(`#accountBalance-${acc.id}`);
+    if (cEl) {
+      const nEl = cEl.querySelector("p:first-child"),
+        bEl = cEl.querySelector("p:last-child");
+      if (nEl) nEl.textContent = acc.name;
+      if (bEl) bEl.textContent = formatCurrency(acc.balance);
+    }
+    totalBalance += acc.balance;
+  });
+  $("#totalBalance").textContent = formatCurrency(totalBalance);
+  const cashRecTotal = state.receivables
+    .filter((r) => r.type === "cash" || (r.type === "cc" && r.sourceAccount))
+    .reduce((s, r) => s + r.remainingAmount, 0);
+  $("#totalPotentialBalance").textContent = formatCurrency(
+    totalBalance + cashRecTotal
+  );
+  $("#totalOwedToMe").textContent = `Total: ${formatCurrency(
+    state.receivables.reduce((s, r) => s + r.remainingAmount, 0)
+  )}`;
+  $("#totalOwed").textContent = `Total: ${formatCurrency(
+    state.debts.reduce((s, d) => s + d.remainingAmount, 0)
+  )}`;
+  $("#totalInstallmentsLeft").textContent = `Total Left: ${formatCurrency(
+    state.installments.reduce((s, i) => s + i.monthlyAmount * i.monthsLeft, 0)
+  )}`;
+  renderRecentTransactions();
+  renderDebtList();
+  renderReceivableList();
+  renderInstallmentList();
+  renderCreditCardSection();
+  renderMonthlyOverviewChart();
+  renderYearlyAndQuickStats();
+}
+
+function renderYearlyAndQuickStats() {
+  const now = new Date(),
+    currentYear = now.getFullYear(),
+    startOfYear = new Date(currentYear, 0, 1);
+  const startOfWeek = new Date(now);
+  startOfWeek.setDate(
+    now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1)
+  );
+  startOfWeek.setHours(0, 0, 0, 0);
+  const todayStart = new Date(now);
+  todayStart.setHours(0, 0, 0, 0);
+  const yesterdayStart = new Date(todayStart);
+  yesterdayStart.setDate(todayStart.getDate() - 1);
+  const lastWeekStart = new Date(startOfWeek);
+  lastWeekStart.setDate(startOfWeek.getDate() - 7);
+  const lastWeekEnd = new Date(startOfWeek);
+  lastWeekEnd.setDate(startOfWeek.getDate() - 1);
+  lastWeekEnd.setHours(23, 59, 59, 999);
+
+  let yearlyEarned = 0,
+    yearlySpent = 0,
+    weeklySpent = 0,
+    todaySpent = 0,
+    yesterdaySpent = 0,
+    lastWeekSpentTotal = 0;
+  state.transactions.forEach((t) => {
+    const d = new Date(t.date);
+    if (isNaN(d.getTime())) return;
+    if (d >= startOfYear) {
+      if (t.type === "income") yearlyEarned += t.amount;
+      if (t.type === "expense") yearlySpent += t.amount;
+    }
+    if (t.type === "expense") {
+      if (d >= startOfWeek) weeklySpent += t.amount;
+      if (d >= todayStart) todaySpent += t.amount;
+      if (d >= yesterdayStart && d < todayStart) yesterdaySpent += t.amount;
+      if (d >= lastWeekStart && d <= lastWeekEnd)
+        lastWeekSpentTotal += t.amount;
+    }
+  });
+  $("#yearlyTotals").textContent = `Yearly: Earned ${formatCurrency(
+    yearlyEarned
+  )} / Spent ${formatCurrency(yearlySpent)}`;
+
+  const quickStatsEl = $("#quickStats");
+  quickStatsEl.innerHTML = `Today: ${formatCurrency(
+    todaySpent
+  )} <span id="todaySpendingIndicator"></span> | This Week: ${formatCurrency(
+    weeklySpent
+  )} <span id="weekSpendingIndicator"></span>`;
+
+  const todayIndicator = $("#todaySpendingIndicator");
+  // Using new indicator classes for green/red
+  if (todaySpent > yesterdaySpent && yesterdaySpent >= 0)
+    todayIndicator.innerHTML = `<i class="fas fa-arrow-up text-indicator-bad spending-indicator" title="More than yesterday (${formatCurrency(
+      yesterdaySpent
+    )})"></i>`;
+  else if (todaySpent < yesterdaySpent && yesterdaySpent > 0)
+    todayIndicator.innerHTML = `<i class="fas fa-arrow-down text-indicator-good spending-indicator" title="Less than yesterday (${formatCurrency(
+      yesterdaySpent
+    )})"></i>`;
+  else todayIndicator.innerHTML = "";
+
+  const weekIndicator = $("#weekSpendingIndicator");
+  // Using new indicator classes for green/red
+  if (weeklySpent > lastWeekSpentTotal && lastWeekSpentTotal >= 0)
+    weekIndicator.innerHTML = `<i class="fas fa-arrow-up text-indicator-bad spending-indicator" title="More than last week (${formatCurrency(
+      lastWeekSpentTotal
+    )})"></i>`;
+  else if (weeklySpent < lastWeekSpentTotal && lastWeekSpentTotal > 0)
+    weekIndicator.innerHTML = `<i class="fas fa-arrow-down text-indicator-good spending-indicator" title="Less than last week (${formatCurrency(
+      lastWeekSpentTotal
+    )})"></i>`;
+  else weekIndicator.innerHTML = "";
+}
+
+// --- RENDERING LISTS & DASHBOARD CHART ---
+function renderRecentTransactions() {
+  const list = $("#recentTransactionsList");
+  if (!list) return;
+  list.innerHTML = "";
+  const recent = [...state.transactions]
+    .sort(
+      (a, b) =>
+        new Date(b.date).setHours(0, 0, 0, 0) -
+          new Date(a.date).setHours(0, 0, 0, 0) || b.timestamp - a.timestamp
+    )
+    .slice(0, 10);
+
+  if (recent.length === 0) {
+    list.innerHTML =
+      '<p class="text-gray-400 text-sm">No transactions yet.</p>';
+    return;
+  }
+
+  recent.forEach((t) => {
+    const div = document.createElement("div");
+    div.className = `flex justify-between items-center p-2 rounded bg-gray-700/50 text-sm transition-colors hover:bg-gray-700/80`;
+
+    const account = state.accounts.find((a) => a.id === t.account);
+    const accountName = account ? account.name : "Unknown";
+    const isIncome = t.type === "income";
+    const textColorClass = isIncome ? "text-income" : "text-expense"; // Use new income/expense classes
+    const categoryText = !isIncome ? `(${t.category || "Uncategorized"})` : "";
+
+    div.innerHTML = `
                 <div class="flex-grow mr-2 overflow-hidden">
-                    <p class="font-medium truncate ${r}" title="${t.description}">${t.description}</p>
-                    <p class="text-xs text-gray-400">${new Date(t.date).toLocaleDateString()} - ${o} ${s}</p>
+                    <p class="font-medium truncate ${textColorClass}" title="${
+      t.description
+    }">${t.description}</p>
+                    <p class="text-xs text-gray-400">${new Date(
+                      t.date
+                    ).toLocaleDateString()} - ${accountName} ${categoryText}</p>
                 </div>
-                <span class="font-semibold whitespace-nowrap ${r}">${i?"+":"-"}${formatCurrency(t.amount)}</span>
+                <span class="font-semibold whitespace-nowrap ${textColorClass}">${
+      isIncome ? "+" : "-"
+    }${formatCurrency(t.amount)}</span>
                 <div class="edit-btn-container flex-shrink-0">
-                    <button class="text-xs accent-text hover:text-accent-hover focus:outline-none" onclick="openEditTransactionForm('${t.id}', event)" title="Edit"><i class="fas fa-edit"></i></button>
-                    <button class="text-xs text-gray-500 hover:text-expense focus:outline-none" onclick="deleteTransaction('${t.id}',event)" title="Delete"><i class="fas fa-times"></i></button>
-                </div>`,e.appendChild(a)})}function renderDebtList(){let e=$("#debtList");if(!e){console.error("#debtList element not found.");return}if(e.innerHTML="",0===state.debts.length){e.innerHTML='<p class="text-gray-400 text-sm">No debts recorded.</p>';return}let t=state.debts.reduce((e,t)=>{let a=t.who.trim();return e[a]||(e[a]={totalOwedTo:0,items:[]}),e[a].totalOwedTo+=t.remainingAmount,e[a].items.push(t),e},{}),a=Object.keys(t).sort((e,t)=>e.localeCompare(t));if(0===a.length){e.innerHTML='<p class="text-gray-400 text-sm">No debts to display by creditor.</p>';return}a.forEach(a=>{let n=t[a],o=`debt-creditor-${generateId()}`,i=document.createElement("div");i.className="mb-3 border border-gray-700 rounded-md overflow-hidden";let r=document.createElement("div");r.className="flex justify-between items-center p-3 cursor-pointer hover:bg-gray-600/50 transition-colors",r.style.backgroundColor="var(--bg-tertiary)",r.onclick=()=>{let e=document.getElementById(o),t=r.querySelector(".toggle-icon i");e&&(e.classList.toggle("hidden"),e.classList.contains("hidden")?(t.classList.remove("fa-chevron-up"),t.classList.add("fa-chevron-down")):(t.classList.remove("fa-chevron-down"),t.classList.add("fa-chevron-up")))},r.innerHTML=`
-          <h4 class="text-md font-semibold text-gray-100">${a}</h4>
+                    <button class="text-xs accent-text hover:text-accent-hover focus:outline-none" onclick="openEditTransactionForm('${
+                      t.id
+                    }', event)" title="Edit"><i class="fas fa-edit"></i></button>
+                    <button class="text-xs text-gray-500 hover:text-expense focus:outline-none" onclick="deleteTransaction('${
+                      t.id
+                    }',event)" title="Delete"><i class="fas fa-times"></i></button>
+                </div>`;
+    list.appendChild(div);
+  });
+}
+
+function renderDebtList() {
+  const listContainer = $("#debtList");
+  if (!listContainer) {
+    console.error("#debtList element not found.");
+    return;
+  }
+  listContainer.innerHTML = "";
+
+  if (state.debts.length === 0) {
+    listContainer.innerHTML =
+      '<p class="text-gray-400 text-sm">No debts recorded.</p>';
+    return;
+  }
+
+  const totalsByCreditor = state.debts.reduce((acc, d) => {
+    const creditorName = d.who.trim();
+    if (!acc[creditorName]) {
+      acc[creditorName] = {
+        totalOwedTo: 0,
+        items: [],
+      };
+    }
+    acc[creditorName].totalOwedTo += d.remainingAmount;
+    acc[creditorName].items.push(d);
+    return acc;
+  }, {});
+
+  const sortedCreditors = Object.keys(totalsByCreditor).sort((a, b) =>
+    a.localeCompare(b)
+  );
+
+  if (sortedCreditors.length === 0) {
+    listContainer.innerHTML =
+      '<p class="text-gray-400 text-sm">No debts to display by creditor.</p>';
+    return;
+  }
+
+  sortedCreditors.forEach((creditorName) => {
+    const creditorData = totalsByCreditor[creditorName];
+    const creditorId = `debt-creditor-${generateId()}`;
+
+    const creditorWrapper = document.createElement("div");
+    creditorWrapper.className =
+      "mb-3 border border-gray-700 rounded-md overflow-hidden"; // This div takes full width of its column
+
+    const creditorHeader = document.createElement("div");
+    creditorHeader.className =
+      "flex justify-between items-center p-3 cursor-pointer hover:bg-gray-600/50 transition-colors"; // Adjusted hover
+    // MODIFIED: Changed background color to --bg-tertiary
+    creditorHeader.style.backgroundColor = "var(--bg-tertiary)";
+    creditorHeader.onclick = () => {
+      const itemsDiv = document.getElementById(creditorId);
+      const icon = creditorHeader.querySelector(".toggle-icon i");
+      if (itemsDiv) {
+        itemsDiv.classList.toggle("hidden");
+        if (itemsDiv.classList.contains("hidden")) {
+          icon.classList.remove("fa-chevron-up");
+          icon.classList.add("fa-chevron-down");
+        } else {
+          icon.classList.remove("fa-chevron-down");
+          icon.classList.add("fa-chevron-up");
+        }
+      }
+    };
+
+    creditorHeader.innerHTML = `
+          <h4 class="text-md font-semibold text-gray-100">${creditorName}</h4>
           <div class="flex items-center">
-              <span class="text-md font-semibold text-expense mr-3">${formatCurrency(n.totalOwedTo)}</span>
+              <span class="text-md font-semibold text-expense mr-3">${formatCurrency(
+                creditorData.totalOwedTo
+              )}</span>
               <span class="toggle-icon text-gray-400"><i class="fas fa-chevron-down"></i></span>
           </div>
-      `,i.appendChild(r);let s=document.createElement("div");s.id=o,s.className="hidden p-2 pt-0 space-y-2",s.style.backgroundColor="var(--bg-secondary)",n.items.sort((e,t)=>new Date(e.dueDate)-new Date(t.dueDate)).forEach(e=>{let t=getDaysLeft(e.dueDate),a,n;t<0?(a=`Overdue by ${Math.abs(t)} day(s)`,n="text-expense font-medium"):0===t?(a="Due Today",n="text-warning font-medium"):(a=`${t} day(s) left`,n="text-gray-300");let o=document.createElement("div");o.className="text-sm py-2 border-b border-gray-700 last:border-b-0",o.innerHTML=`
+      `;
+    creditorWrapper.appendChild(creditorHeader);
+
+    const itemsListContainer = document.createElement("div");
+    itemsListContainer.id = creditorId;
+    itemsListContainer.className = "hidden p-2 pt-0 space-y-2";
+    itemsListContainer.style.backgroundColor = "var(--bg-secondary)";
+
+    creditorData.items
+      .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
+      .forEach((d) => {
+        const daysLeft = getDaysLeft(d.dueDate);
+        let daysText, daysColor;
+        if (daysLeft < 0) {
+          daysText = `Overdue by ${Math.abs(daysLeft)} day(s)`;
+          daysColor = "text-expense font-medium";
+        } else if (daysLeft === 0) {
+          daysText = `Due Today`;
+          daysColor = "text-warning font-medium";
+        } else {
+          daysText = `${daysLeft} day(s) left`;
+          daysColor = "text-gray-300";
+        }
+
+        const itemDiv = document.createElement("div");
+        itemDiv.className =
+          "text-sm py-2 border-b border-gray-700 last:border-b-0";
+        itemDiv.innerHTML = `
               <div class="flex justify-between items-start mb-1">
                   <div>
-                      <p class="font-medium text-gray-200">${e.why}</p>
-                      <p class="text-xs ${n}">${a}</p>
+                      <p class="font-medium text-gray-200">${d.why}</p>
+                      <p class="text-xs ${daysColor}">${daysText}</p>
                   </div>
-                  <span class="font-semibold text-expense">${formatCurrency(e.remainingAmount)}</span>
+                  <span class="font-semibold text-expense">${formatCurrency(
+                    d.remainingAmount
+                  )}</span>
               </div>
               <div class="flex justify-between items-center text-xs text-gray-500 mt-1">
-                  <span>Due: ${new Date(e.dueDate).toLocaleDateString()}</span>
+                  <span>Due: ${new Date(d.dueDate).toLocaleDateString()}</span>
                   <div class="edit-btn-container">
-                      <button class="link-style text-xs mr-2 accent-text hover:text-accent-hover" onclick="openEditDebtForm('${e.id}')">Edit</button>
-                      <button class="link-style text-xs mr-2 text-income hover:opacity-80" onclick="openPayDebtForm('${e.id}')">Pay</button>
-                      <button class="text-gray-500 hover:text-expense text-xs focus:outline-none" onclick="deleteDebt('${e.id}')" title="Delete"><i class="fas fa-times"></i></button>
+                      <button class="link-style text-xs mr-2 accent-text hover:text-accent-hover" onclick="openEditDebtForm('${
+                        d.id
+                      }')">Edit</button>
+                      <button class="link-style text-xs mr-2 text-income hover:opacity-80" onclick="openPayDebtForm('${
+                        d.id
+                      }')">Pay</button>
+                      <button class="text-gray-500 hover:text-expense text-xs focus:outline-none" onclick="deleteDebt('${
+                        d.id
+                      }')" title="Delete"><i class="fas fa-times"></i></button>
                   </div>
               </div>
-          `,s.appendChild(o)}),i.appendChild(s),e.appendChild(i)})}function renderReceivableList(){let e=$("#receivableList");if(!e){console.error("#receivableList element not found.");return}if(e.innerHTML="",0===state.receivables.length){e.innerHTML='<p class="text-gray-400 text-sm">No receivables recorded.</p>';return}let t=state.receivables.reduce((e,t)=>{let a=t.who.trim();return e[a]||(e[a]={totalOwed:0,items:[]}),e[a].totalOwed+=t.remainingAmount,e[a].items.push(t),e},{}),a=Object.keys(t).sort((e,t)=>e.localeCompare(t));if(0===a.length){e.innerHTML='<p class="text-gray-400 text-sm">No receivables to display by person.</p>';return}a.forEach(a=>{let n=t[a],o=`receivable-person-${generateId()}`,i=document.createElement("div");i.className="mb-3 border border-gray-700 rounded-md overflow-hidden";let r=document.createElement("div");r.className="flex justify-between items-center p-3 cursor-pointer hover:bg-gray-600/50 transition-colors",r.style.backgroundColor="var(--bg-tertiary)",r.onclick=()=>{let e=document.getElementById(o),t=r.querySelector(".toggle-icon i");e&&(e.classList.toggle("hidden"),e.classList.contains("hidden")?(t.classList.remove("fa-chevron-up"),t.classList.add("fa-chevron-down")):(t.classList.remove("fa-chevron-down"),t.classList.add("fa-chevron-up")))},r.innerHTML=`
-          <h4 class="text-md font-semibold text-gray-100">${a}</h4>
+          `;
+        itemsListContainer.appendChild(itemDiv);
+      });
+    creditorWrapper.appendChild(itemsListContainer);
+    listContainer.appendChild(creditorWrapper);
+  });
+}
+
+function renderReceivableList() {
+  const listContainer = $("#receivableList");
+  if (!listContainer) {
+    console.error("#receivableList element not found.");
+    return;
+  }
+  listContainer.innerHTML = "";
+
+  if (state.receivables.length === 0) {
+    listContainer.innerHTML =
+      '<p class="text-gray-400 text-sm">No receivables recorded.</p>';
+    return;
+  }
+
+  const totalsByPerson = state.receivables.reduce((acc, r) => {
+    const personName = r.who.trim();
+    if (!acc[personName]) {
+      acc[personName] = {
+        totalOwed: 0,
+        items: [],
+      };
+    }
+    acc[personName].totalOwed += r.remainingAmount;
+    acc[personName].items.push(r);
+    return acc;
+  }, {});
+
+  const sortedPeople = Object.keys(totalsByPerson).sort((a, b) =>
+    a.localeCompare(b)
+  );
+
+  if (sortedPeople.length === 0) {
+    listContainer.innerHTML =
+      '<p class="text-gray-400 text-sm">No receivables to display by person.</p>';
+    return;
+  }
+
+  sortedPeople.forEach((personName) => {
+    const personData = totalsByPerson[personName];
+    const personId = `receivable-person-${generateId()}`;
+
+    const personWrapper = document.createElement("div");
+    personWrapper.className =
+      "mb-3 border border-gray-700 rounded-md overflow-hidden"; // This div takes full width of its column
+
+    const personHeader = document.createElement("div");
+    personHeader.className =
+      "flex justify-between items-center p-3 cursor-pointer hover:bg-gray-600/50 transition-colors"; // Adjusted hover
+    // MODIFIED: Changed background color to --bg-tertiary
+    personHeader.style.backgroundColor = "var(--bg-tertiary)";
+    personHeader.onclick = () => {
+      const itemsDiv = document.getElementById(personId);
+      const icon = personHeader.querySelector(".toggle-icon i");
+      if (itemsDiv) {
+        itemsDiv.classList.toggle("hidden");
+        if (itemsDiv.classList.contains("hidden")) {
+          icon.classList.remove("fa-chevron-up");
+          icon.classList.add("fa-chevron-down");
+        } else {
+          icon.classList.remove("fa-chevron-down");
+          icon.classList.add("fa-chevron-up");
+        }
+      }
+    };
+
+    personHeader.innerHTML = `
+          <h4 class="text-md font-semibold text-gray-100">${personName}</h4>
           <div class="flex items-center">
-              <span class="text-md font-semibold text-income mr-3">${formatCurrency(n.totalOwed)}</span>
+              <span class="text-md font-semibold text-income mr-3">${formatCurrency(
+                personData.totalOwed
+              )}</span>
               <span class="toggle-icon text-gray-400"><i class="fas fa-chevron-down"></i></span>
           </div>
-      `,i.appendChild(r);let s=document.createElement("div");s.id=o,s.className="hidden p-2 pt-0 space-y-2",s.style.backgroundColor="var(--bg-secondary)",n.items.sort((e,t)=>new Date(t.dateGiven)-new Date(e.dateGiven)).forEach(e=>{let t=state.accounts.find(t=>t.id===e.sourceAccount),a="cash"===e.type?`(From: ${t?.name||"Unknown"})`:"(Via CC)",n=document.createElement("div");n.className="text-sm py-2 border-b border-gray-700 last:border-b-0",n.innerHTML=`
+      `;
+    personWrapper.appendChild(personHeader);
+
+    const itemsListContainer = document.createElement("div");
+    itemsListContainer.id = personId;
+    itemsListContainer.className = "hidden p-2 pt-0 space-y-2";
+    itemsListContainer.style.backgroundColor = "var(--bg-secondary)";
+
+    personData.items
+      .sort((a, b) => new Date(b.dateGiven) - new Date(a.dateGiven))
+      .forEach((r) => {
+        const srcAcc = state.accounts.find((a) => a.id === r.sourceAccount);
+        const srcTxt =
+          r.type === "cash"
+            ? `(From: ${srcAcc?.name || "Unknown"})`
+            : "(Via CC)";
+
+        const itemDiv = document.createElement("div");
+        itemDiv.className =
+          "text-sm py-2 border-b border-gray-700 last:border-b-0";
+        itemDiv.innerHTML = `
               <div class="flex justify-between items-start mb-1">
                   <div>
-                      <p class="font-medium text-gray-200">${e.why}</p>
-                      <p class="text-xs text-gray-400">${a}</p>
+                      <p class="font-medium text-gray-200">${r.why}</p>
+                      <p class="text-xs text-gray-400">${srcTxt}</p>
                   </div>
-                  <span class="font-semibold text-income">${formatCurrency(e.remainingAmount)}</span>
+                  <span class="font-semibold text-income">${formatCurrency(
+                    r.remainingAmount
+                  )}</span>
               </div>
               <div class="flex justify-between items-center text-xs text-gray-500 mt-1">
-                  <span>Given: ${new Date(e.dateGiven).toLocaleDateString()}</span>
+                  <span>Given: ${new Date(
+                    r.dateGiven
+                  ).toLocaleDateString()}</span>
                   <div class="edit-btn-container">
-                      <button class="link-style text-xs mr-2 accent-text hover:text-accent-hover" onclick="openEditReceivableForm('${e.id}')">Edit</button>
-                      <button class="link-style text-xs mr-2 text-income hover:opacity-80" onclick="openReceivePaymentForm('${e.id}')">Receive</button>
-                      <button class="text-gray-500 hover:text-expense text-xs focus:outline-none" onclick="deleteReceivable('${e.id}')" title="Delete"><i class="fas fa-times"></i></button>
+                      <button class="link-style text-xs mr-2 accent-text hover:text-accent-hover" onclick="openEditReceivableForm('${
+                        r.id
+                      }')">Edit</button>
+                      <button class="link-style text-xs mr-2 text-income hover:opacity-80" onclick="openReceivePaymentForm('${
+                        r.id
+                      }')">Receive</button>
+                      <button class="text-gray-500 hover:text-expense text-xs focus:outline-none" onclick="deleteReceivable('${
+                        r.id
+                      }')" title="Delete"><i class="fas fa-times"></i></button>
                   </div>
               </div>
-          `,s.appendChild(n)}),i.appendChild(s),e.appendChild(i)})}function renderInstallmentList(){let e=$("#installmentList");if(!e)return;e.innerHTML="";let t=[...state.installments].sort((e,t)=>{let a=new Date(e.startDate);a.setMonth(a.getMonth()+e.totalMonths);let n=new Date(t.startDate);return n.setMonth(n.getMonth()+t.totalMonths),a-n});if(0===t.length){e.innerHTML='<p class="text-gray-400 text-sm">No installments.</p>';return}t.forEach(t=>{let a=new Date(t.startDate);a.setMonth(a.getMonth()+t.totalMonths);let n=getDaysLeft(a),o=n<0?'<span class="text-gray-500">Finished</span>':`<span class="text-gray-300">${n} day(s) left</span>`,i=t.monthlyAmount*t.monthsLeft,r=t.totalMonths>0?(t.totalMonths-t.monthsLeft)/t.totalMonths*100:0,s=document.createElement("div");s.className="p-3 rounded bg-gray-700/50 text-sm mb-2 flex items-center gap-x-3";let l=`
-                <div class="installment-progress-ring-container w-10 h-10 flex-shrink-0" title="${r.toFixed(0)}% Paid (${t.monthsLeft} months left)">
+          `;
+        itemsListContainer.appendChild(itemDiv);
+      });
+    personWrapper.appendChild(itemsListContainer);
+    listContainer.appendChild(personWrapper);
+  });
+}
+
+function renderInstallmentList() {
+  const list = $("#installmentList");
+  if (!list) return;
+  list.innerHTML = "";
+  const sortedInstallments = [...state.installments].sort((a, b) => {
+    const endDateA = new Date(a.startDate);
+    endDateA.setMonth(endDateA.getMonth() + a.totalMonths);
+    const endDateB = new Date(b.startDate);
+    endDateB.setMonth(endDateB.getMonth() + b.totalMonths);
+    return endDateA - endDateB;
+  });
+
+  if (sortedInstallments.length === 0) {
+    list.innerHTML = '<p class="text-gray-400 text-sm">No installments.</p>';
+    return;
+  }
+
+  sortedInstallments.forEach((i) => {
+    const endDate = new Date(i.startDate);
+    endDate.setMonth(endDate.getMonth() + i.totalMonths);
+    const daysLeft = getDaysLeft(endDate);
+    let daysLeftText =
+      daysLeft < 0
+        ? `<span class="text-gray-500">Finished</span>`
+        : `<span class="text-gray-300">${daysLeft} day(s) left</span>`;
+    const totalLeftToPay = i.monthlyAmount * i.monthsLeft;
+    const progressPercent =
+      i.totalMonths > 0
+        ? ((i.totalMonths - i.monthsLeft) / i.totalMonths) * 100
+        : 0;
+
+    const div = document.createElement("div");
+    div.className =
+      "p-3 rounded bg-gray-700/50 text-sm mb-2 flex items-center gap-x-3";
+
+    const ringHtml = `
+                <div class="installment-progress-ring-container w-10 h-10 flex-shrink-0" title="${progressPercent.toFixed(
+                  0
+                )}% Paid (${i.monthsLeft} months left)">
                     <svg class="w-full h-full" viewBox="0 0 36 36">
                         <path class="progress-ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke-width="3"></path>
-                        <path class="progress-ring-circle" stroke-dasharray="${r.toFixed(2)}, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke-linecap="round" stroke-width="3"></path>
-                        <text x="18" y="17.5" class="progress-ring-text" text-anchor="middle" fill="var(--text-primary)">${t.monthsLeft}</text> 
+                        <path class="progress-ring-circle" stroke-dasharray="${progressPercent.toFixed(
+                          2
+                        )}, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke-linecap="round" stroke-width="3"></path>
+                        <text x="18" y="17.5" class="progress-ring-text" text-anchor="middle" fill="var(--text-primary)">${
+                          i.monthsLeft
+                        }</text> 
                     </svg>
                 </div>
-            `;s.innerHTML=`
-                ${l}
+            `;
+
+    div.innerHTML = `
+                ${ringHtml}
                 <div class="flex-grow">
                     <div class="flex justify-between items-start mb-1">
                         <div>
-                            <p class="font-medium">${t.description}</p>
-                            <p class="text-xs text-gray-400">${formatCurrency(t.monthlyAmount)} / month</p>
+                            <p class="font-medium">${i.description}</p>
+                            <p class="text-xs text-gray-400">${formatCurrency(
+                              i.monthlyAmount
+                            )} / month</p>
                         </div>
-                        <span class="font-semibold text-gray-200 whitespace-nowrap">${formatCurrency(i)} Left</span> 
+                        <span class="font-semibold text-gray-200 whitespace-nowrap">${formatCurrency(
+                          totalLeftToPay
+                        )} Left</span> 
                     </div>
                     <div class="flex justify-between items-center text-xs text-gray-400 mt-1">
-                        <span>${t.monthsLeft} of ${t.totalMonths} months left (${o})</span>
+                        <span>${i.monthsLeft} of ${
+      i.totalMonths
+    } months left (${daysLeftText})</span>
                         <div class="edit-btn-container">
-                            ${t.monthsLeft>0?`<button class="link-style text-sm mr-2 accent-text hover:text-accent-hover" onclick="openEditInstallmentForm('${t.id}')">Edit</button><button class="text-income hover:opacity-80 mr-2 text-sm link-style" onclick="payInstallmentMonth('${t.id}')">Pay Month</button>`:`<button class="link-style text-sm mr-2 accent-text hover:text-accent-hover" onclick="openEditInstallmentForm('${t.id}')">Edit</button>`}
-                            <button class="text-gray-500 hover:text-expense text-xs focus:outline-none" onclick="deleteInstallment('${t.id}')" title="Delete"><i class="fas fa-times"></i></button>
+                            ${
+                              i.monthsLeft > 0
+                                ? `<button class="link-style text-sm mr-2 accent-text hover:text-accent-hover" onclick="openEditInstallmentForm('${i.id}')">Edit</button><button class="text-income hover:opacity-80 mr-2 text-sm link-style" onclick="payInstallmentMonth('${i.id}')">Pay Month</button>`
+                                : `<button class="link-style text-sm mr-2 accent-text hover:text-accent-hover" onclick="openEditInstallmentForm('${i.id}')">Edit</button>`
+                            }
+                            <button class="text-gray-500 hover:text-expense text-xs focus:outline-none" onclick="deleteInstallment('${
+                              i.id
+                            }')" title="Delete"><i class="fas fa-times"></i></button>
                         </div>
                     </div>
                 </div>
-            `,e.appendChild(s)})}let monthlyOverviewChartInstance=null;function renderMonthlyOverviewChart(){let e=$("#monthlyOverviewChart");if(!e)return;let t=e.getContext("2d"),a=[],n=[],o=[],i=new Date;for(let r=11;r>=0;r--){let s=new Date(i.getFullYear(),i.getMonth()-r,1),l=s.getFullYear(),c=s.getMonth();a.push(s.toLocaleString("default",{month:"short"}));let d=0,u=0;state.transactions.forEach(e=>{let t=new Date(e.date);isNaN(t.getTime())||t.getFullYear()!==l||t.getMonth()!==c||("income"===e.type?d+=e.amount:"expense"!==e.type||(u+=e.amount))}),n.push(d),o.push(u)}let m="#2a9d8f",p="#e74c3c",f=(e,t=.3)=>{let a=parseInt(e.slice(1,3),16),n=parseInt(e.slice(3,5),16),o=parseInt(e.slice(5,7),16);return`rgba(${a}, ${n}, ${o}, ${t})`};monthlyOverviewChartInstance?(monthlyOverviewChartInstance.data.labels=a,monthlyOverviewChartInstance.data.datasets[0].data=n,monthlyOverviewChartInstance.data.datasets[1].data=o,monthlyOverviewChartInstance.update()):monthlyOverviewChartInstance=new Chart(t,{type:"line",data:{labels:a,datasets:[{label:"Income",data:n,borderColor:m,backgroundColor:f(m,.3),fill:!0,tension:.4,pointBackgroundColor:m,pointBorderColor:"#fff",pointHoverRadius:6,pointHoverBackgroundColor:"#fff",pointHoverBorderColor:m},{label:"Expenses",data:o,borderColor:p,backgroundColor:f(p,.3),fill:!0,tension:.4,pointBackgroundColor:p,pointBorderColor:"#fff",pointHoverRadius:6,pointHoverBackgroundColor:"#fff",pointHoverBorderColor:p},]},options:{responsive:!0,maintainAspectRatio:!1,scales:{y:{beginAtZero:!0,ticks:{color:"#aaa",callback:e=>e>=1e6?"LKR "+(e/1e6).toFixed(1)+"M":e>=1e3?"LKR "+(e/1e3).toFixed(0)+"k":formatCurrency(e)},grid:{color:"rgba(255,255,255,0.1)",drawBorder:!1}},x:{ticks:{color:"#aaa"},grid:{display:!1}}},plugins:{legend:{position:"top",labels:{color:"#e0e0e0",usePointStyle:!0,boxWidth:8}},tooltip:{backgroundColor:"rgba(0,0,0,0.8)",titleColor:"#fff",bodyColor:"#fff",padding:10,cornerRadius:4,usePointStyle:!0,callbacks:{label:e=>`${e.dataset.label||""}: ${formatCurrency(e.parsed.y)}`}}},interaction:{mode:"index",intersect:!1}}})}function handleTransactionSubmit(e){e.preventDefault();let t=e.target,a=new FormData(t),n=a.get("transactionType"),o=parseFloat(a.get("amount")),i=a.get("account"),r="expense"===n?a.get("category"):null,s=a.get("description").trim(),l=a.get("date");if(isNaN(o)||o<=0){showNotification("Valid amount required.","error");return}if(!i){showNotification("Account required.","error");return}if("expense"===n&&!r){showNotification("Category required for expense.","error");return}if(!s){showNotification("Description required.","error");return}if(!l){showNotification("Date required.","error");return}let c=state.accounts.find(e=>e.id===i);if(!c){showNotification("Account not found.","error");return}let d=Date.now();"expense"===n&&c.balance<o&&showNotification(`Insufficient funds in ${c.name}. Transaction still added.`,"warning");let u={id:generateId(),type:n,amount:o,account:i,category:r,description:s,date:l,timestamp:d};state.transactions.push(u),"income"===n?c.balance+=o:c.balance-=o,isNaN(c.balance)&&(c.balance=0),showNotification(`${n.charAt(0).toUpperCase()+n.slice(1)} added.`,"success"),saveData(),renderDashboard(),populateDropdowns(),t.reset();let m=t.querySelector("#date");m&&(m.value=new Date().toISOString().split("T")[0]);let p=t.querySelector("#transactionType");p&&p.dispatchEvent(new Event("change")),refreshMonthlyViewIfRelevant(l)}function openEditTransactionModal(e,t){t&&t.stopPropagation();let a=state.transactions.find(t=>t.id===e);if(!a){showNotification("Transaction not found for editing.","error");return}let n=state.accounts.map(e=>`<option value="${e.id}" ${a.account===e.id?"selected":""}>${e.name} (${formatCurrency(e.balance)})</option>`).join(""),o=state.categories.sort((e,t)=>e.localeCompare(t)).map(e=>`<option value="${e}" ${a.category===e?"selected":""}>${e}</option>`).join(""),i=`
-            <input type="hidden" name="editTransactionId" value="${a.id}">
+            `;
+    list.appendChild(div);
+  });
+}
+
+let monthlyOverviewChartInstance = null;
+
+function renderMonthlyOverviewChart() {
+  const canvas = $("#monthlyOverviewChart");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  const labels = [],
+    incomeData = [],
+    expenseData = [];
+  const now = new Date();
+
+  for (let i = 11; i >= 0; i--) {
+    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const year = date.getFullYear(), // year variable is still useful for data filtering
+      month = date.getMonth(); // month variable is still useful for data filtering
+
+    // --- MODIFIED LINE FOR LABELS ---
+    labels.push(
+      date.toLocaleString("default", { month: "short" }) // Now only shows the short month name
+    );
+    // --- END OF MODIFICATION ---
+
+    let monthlyIncome = 0,
+      monthlyExpense = 0;
+    state.transactions.forEach((t) => {
+      const tDate = new Date(t.date);
+      if (isNaN(tDate.getTime())) return;
+      if (tDate.getFullYear() === year && tDate.getMonth() === month) {
+        // Ensure data is still filtered by correct year and month
+        if (t.type === "income") monthlyIncome += t.amount;
+        else if (t.type === "expense") monthlyExpense += t.amount;
+      }
+    });
+    incomeData.push(monthlyIncome);
+    expenseData.push(monthlyExpense);
+  }
+
+  const incomeColor = "#2a9d8f"; // From CSS var --income-color
+  const expenseColor = "#e74c3c"; // From CSS var --expense-color
+  const hexToRgba = (hex, alpha = 0.3) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  };
+
+  if (monthlyOverviewChartInstance) {
+    // If chart instance exists, update its data
+    monthlyOverviewChartInstance.data.labels = labels;
+    monthlyOverviewChartInstance.data.datasets[0].data = incomeData; // Income dataset
+    monthlyOverviewChartInstance.data.datasets[1].data = expenseData; // Expense dataset
+    monthlyOverviewChartInstance.update();
+  } else {
+    // If chart instance doesn't exist, create it
+    monthlyOverviewChartInstance = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: "Income",
+            data: incomeData,
+            borderColor: incomeColor,
+            backgroundColor: hexToRgba(incomeColor, 0.3),
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: incomeColor,
+            pointBorderColor: "#fff",
+            pointHoverRadius: 6,
+            pointHoverBackgroundColor: "#fff",
+            pointHoverBorderColor: incomeColor,
+          },
+          {
+            label: "Expenses",
+            data: expenseData,
+            borderColor: expenseColor,
+            backgroundColor: hexToRgba(expenseColor, 0.3),
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: expenseColor,
+            pointBorderColor: "#fff",
+            pointHoverRadius: 6,
+            pointHoverBackgroundColor: "#fff",
+            pointHoverBorderColor: expenseColor,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              color: "#aaa",
+              callback: (v) =>
+                v >= 1000000
+                  ? "LKR " + (v / 1000000).toFixed(1) + "M"
+                  : v >= 1000
+                  ? "LKR " + (v / 1000).toFixed(0) + "k"
+                  : formatCurrency(v),
+            },
+            grid: { color: "rgba(255,255,255,0.1)", drawBorder: false },
+          },
+          x: {
+            ticks: { color: "#aaa" },
+            grid: { display: false },
+          },
+        },
+        plugins: {
+          legend: {
+            position: "top",
+            labels: { color: "#e0e0e0", usePointStyle: true, boxWidth: 8 },
+          },
+          tooltip: {
+            backgroundColor: "rgba(0,0,0,0.8)",
+            titleColor: "#fff",
+            bodyColor: "#fff",
+            padding: 10,
+            cornerRadius: 4,
+            usePointStyle: true,
+            callbacks: {
+              label: (c) =>
+                `${c.dataset.label || ""}: ${formatCurrency(c.parsed.y)}`,
+            },
+          },
+        },
+        interaction: { mode: "index", intersect: false },
+      },
+    });
+  }
+}
+
+// --- TRANSACTION & TRANSFER HANDLING ---
+function handleTransactionSubmit(event) {
+  event.preventDefault();
+  const form = event.target,
+    formData = new FormData(form);
+  const type = formData.get("transactionType"),
+    amount = parseFloat(formData.get("amount")),
+    accountId = formData.get("account");
+  const category = type === "expense" ? formData.get("category") : null,
+    description = formData.get("description").trim(),
+    date = formData.get("date");
+
+  if (isNaN(amount) || amount <= 0) {
+    showNotification("Valid amount required.", "error");
+    return;
+  }
+  if (!accountId) {
+    showNotification("Account required.", "error");
+    return;
+  }
+  if (type === "expense" && !category) {
+    showNotification("Category required for expense.", "error");
+    return;
+  }
+  if (!description) {
+    showNotification("Description required.", "error");
+    return;
+  }
+  if (!date) {
+    showNotification("Date required.", "error");
+    return;
+  }
+
+  const account = state.accounts.find((acc) => acc.id === accountId);
+  if (!account) {
+    showNotification("Account not found.", "error");
+    return;
+  }
+  const timestamp = Date.now();
+
+  if (type === "expense" && account.balance < amount) {
+    showNotification(
+      `Insufficient funds in ${account.name}. Transaction still added.`,
+      "warning"
+    );
+  }
+  const newTransaction = {
+    id: generateId(),
+    type,
+    amount,
+    account: accountId,
+    category,
+    description,
+    date,
+    timestamp,
+  };
+  state.transactions.push(newTransaction);
+  if (type === "income") account.balance += amount;
+  else account.balance -= amount;
+  if (isNaN(account.balance)) account.balance = 0;
+  showNotification(
+    `${type.charAt(0).toUpperCase() + type.slice(1)} added.`,
+    "success"
+  );
+
+  saveData();
+  renderDashboard();
+  populateDropdowns();
+  form.reset();
+  const dateInput = form.querySelector("#date");
+  if (dateInput) dateInput.value = new Date().toISOString().split("T")[0];
+  const transactionTypeSelect = form.querySelector("#transactionType");
+  if (transactionTypeSelect)
+    transactionTypeSelect.dispatchEvent(new Event("change"));
+  refreshMonthlyViewIfRelevant(date);
+}
+
+function openEditTransactionModal(transactionId, event) {
+  if (event) event.stopPropagation();
+  const transaction = state.transactions.find((tx) => tx.id === transactionId);
+  if (!transaction) {
+    showNotification("Transaction not found for editing.", "error");
+    return;
+  }
+
+  const accountOptions = state.accounts
+    .map(
+      (acc) =>
+        `<option value="${acc.id}" ${
+          transaction.account === acc.id ? "selected" : ""
+        }>${acc.name} (${formatCurrency(acc.balance)})</option>`
+    )
+    .join("");
+
+  const categoryOptions = state.categories
+    .sort((a, b) => a.localeCompare(b))
+    .map(
+      (cat) =>
+        `<option value="${cat}" ${
+          transaction.category === cat ? "selected" : ""
+        }>${cat}</option>`
+    )
+    .join("");
+
+  const formHtml = `
+            <input type="hidden" name="editTransactionId" value="${
+              transaction.id
+            }">
             <div>
                 <label for="modalTransactionType" class="block text-sm font-medium mb-1">Type</label>
                 <select id="modalTransactionType" name="transactionType" required onchange="toggleCategoryVisibilityInModal(this, 'modalCategoryGroup', 'modalCategory')">
-                    <option value="expense" ${"expense"===a.type?"selected":""}>Expense</option>
-                    <option value="income" ${"income"===a.type?"selected":""}>Income</option>
+                    <option value="expense" ${
+                      transaction.type === "expense" ? "selected" : ""
+                    }>Expense</option>
+                    <option value="income" ${
+                      transaction.type === "income" ? "selected" : ""
+                    }>Income</option>
                 </select>
             </div>
             <div>
                 <label for="modalAmount" class="block text-sm font-medium mb-1">Amount (LKR)</label>
-                <input type="number" id="modalAmount" name="amount" value="${a.amount.toFixed(2)}" step="0.01" min="0" placeholder="e.g., 1500.50" required>
+                <input type="number" id="modalAmount" name="amount" value="${transaction.amount.toFixed(
+                  2
+                )}" step="0.01" min="0" placeholder="e.g., 1500.50" required>
             </div>
             <div>
                 <label for="modalAccount" class="block text-sm font-medium mb-1">Account</label>
-                <select id="modalAccount" name="account" required>${n}</select>
+                <select id="modalAccount" name="account" required>${accountOptions}</select>
             </div>
-            <div id="modalCategoryGroup" style="display: ${"expense"===a.type?"block":"none"};">
+            <div id="modalCategoryGroup" style="display: ${
+              transaction.type === "expense" ? "block" : "none"
+            };">
                 <label for="modalCategory" class="block text-sm font-medium mb-1">Category</label>
-                <select id="modalCategory" name="category" ${"expense"===a.type?"required":""}>${o}</select>
+                <select id="modalCategory" name="category" ${
+                  transaction.type === "expense" ? "required" : ""
+                }>${categoryOptions}</select>
             </div>
             <div>
                 <label for="modalDescription" class="block text-sm font-medium mb-1">Description</label>
-                <input type="text" id="modalDescription" name="description" value="${a.description}" placeholder="e.g., Lunch with friends" required>
+                <input type="text" id="modalDescription" name="description" value="${
+                  transaction.description
+                }" placeholder="e.g., Lunch with friends" required>
             </div>
             <div>
                 <label for="modalDate" class="block text-sm font-medium mb-1">Date</label>
-                <input type="date" id="modalDate" name="date" value="${a.date}" required>
+                <input type="date" id="modalDate" name="date" value="${
+                  transaction.date
+                }" required>
             </div>
             <button type="submit" class="btn btn-primary w-full"><i class="fas fa-save"></i> Update Transaction</button>
-        `;openFormModal("Edit Transaction",i,handleEditTransactionModalSubmit);let r=document.getElementById("modalTransactionType");r&&toggleCategoryVisibilityInModal(r,"modalCategoryGroup","modalCategory")}function handleEditTransactionModalSubmit(e){e.preventDefault();let t=e.target,a=new FormData(t),n=a.get("editTransactionId"),o=state.transactions.find(e=>e.id===n);if(!o){showNotification("Transaction to edit not found.","error"),closeModal("formModal");return}let i=o.date,r=a.get("transactionType"),s=parseFloat(a.get("amount")),l=a.get("account"),c="expense"===r?a.get("category"):null,d=a.get("description").trim(),u=a.get("date");if(isNaN(s)||s<=0){showNotification("Valid amount required.","error");return}if(!l){showNotification("Account required.","error");return}if("expense"===r&&!c){showNotification("Category required for expense.","error");return}if(!d){showNotification("Description required.","error");return}if(!u){showNotification("Date required.","error");return}let m=state.accounts.find(e=>e.id===o.account);m&&("income"===o.type?m.balance-=o.amount:m.balance+=o.amount,isNaN(m.balance)&&(m.balance=0)),o.type=r,o.amount=s,o.account=l,o.category=c,o.description=d,o.date=u,o.timestamp=Date.now();let p=state.accounts.find(e=>e.id===l);p?("income"===r?p.balance+=s:p.balance-=s,isNaN(p.balance)&&(p.balance=0),p.balance<0&&(m?.id!==p.id||"expense"===r)&&showNotification(`Warning: ${p.name} now has a negative balance.`,"warning")):showNotification("New account not found. Transaction update may be incomplete.","error"),saveData(),renderDashboard(),populateDropdowns(),closeModal("formModal"),showNotification("Transaction updated successfully.","success"),refreshMonthlyViewIfRelevant(u),i!==u&&refreshMonthlyViewIfRelevant(i)}function deleteTransaction(e,t){t&&t.stopPropagation();let a=state.transactions.findIndex(t=>t.id===e);if(-1===a)return;let n=state.transactions[a],o=state.accounts.find(e=>e.id===n.account);if(confirm(`Delete: "${n.description}" (${formatCurrency(n.amount)})?`)){o&&("income"===n.type?o.balance-=n.amount:o.balance+=n.amount,isNaN(o.balance)&&(o.balance=0));let i=n.date;state.transactions.splice(a,1),saveData(),renderDashboard(),populateDropdowns(),showNotification("Transaction deleted.","success"),refreshMonthlyViewIfRelevant(i)}}function handleTransferSubmit(e){e.preventDefault();let t=e.target,a=new FormData(t),n=parseFloat(a.get("transferAmount")),o=a.get("transferFrom"),i=a.get("transferTo"),r=$("#transferError");if(r.classList.add("hidden"),isNaN(n)||n<=0){showNotification("Valid amount required.","error");return}if(o===i){r.classList.remove("hidden"),showNotification("Cannot transfer to same account.","error");return}let s=state.accounts.find(e=>e.id===o),l=state.accounts.find(e=>e.id===i);if(!s||!l){showNotification("Invalid account.","error");return}if(s.balance<n){showNotification(`Insufficient funds in ${s.name}.`,"warning");return}s.balance-=n,l.balance+=n,isNaN(s.balance)&&(s.balance=0),isNaN(l.balance)&&(l.balance=0),saveData(),renderDashboard(),populateDropdowns(),t.reset(),showNotification(`Transferred ${formatCurrency(n)} from ${s.name} to ${l.name}.`,"success")}function refreshMonthlyViewIfRelevant(e){let t=$("#monthlyViewModal"),a=$("#monthTabs .tab-button.active");if("block"===t.style.display&&a){let n=parseInt(a.dataset.month),o=parseInt(a.dataset.year),i=new Date(e+"T00:00:00");isNaN(i.getTime())||i.getFullYear()!==o||i.getMonth()!==n||renderMonthlyDetails(n,o)}}let monthlyPieChartInstance=null;function setupMonthlyView(){let e=$("#yearSelector"),t=new Date().getFullYear(),a=new Set(state.transactions.map(e=>new Date(e.date).getFullYear()));a.add(t),e.innerHTML="",[...a].sort((e,t)=>t-e).forEach(a=>{let n=document.createElement("option");n.value=a,n.textContent=a,a===t&&(n.selected=!0),e.appendChild(n)}),e.addEventListener("change",()=>{renderMonthTabs(parseInt(e.value)),$("#monthlyDetailsContainer").innerHTML='<p class="text-center text-gray-400">Select a month to view details.</p>',monthlyPieChartInstance&&(monthlyPieChartInstance.destroy(),monthlyPieChartInstance=null)}),renderMonthTabs(parseInt(e.value))}function renderMonthTabs(e){let t=$("#monthTabs");t.innerHTML="",["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec",].forEach((a,n)=>{let o=document.createElement("button");o.className="tab-button !px-3 !py-1.5 !text-sm",o.textContent=a,o.dataset.month=n,o.dataset.year=e,o.onclick=()=>{$$("#monthTabs .tab-button").forEach(e=>e.classList.remove("active")),o.classList.add("active"),renderMonthlyDetails(n,e)},t.appendChild(o)})}function renderMonthlyDetails(e,t){let a=$("#monthlyDetailsContainer");a.innerHTML="";let n=state.transactions.filter(a=>{let n=new Date(a.date+"T00:00:00");return!isNaN(n.getTime())&&n.getFullYear()===t&&n.getMonth()===e}).sort((e,t)=>new Date(t.date).setHours(0,0,0,0)-new Date(e.date).setHours(0,0,0,0)||t.timestamp-e.timestamp),o=0,i=0,r={};state.categories.forEach(e=>r[e]=0);let s=0,l=new Date(t,e-1,1);state.transactions.filter(e=>{let t=new Date(e.date+"T00:00:00");return"expense"===e.type&&!isNaN(t.getTime())&&t.getFullYear()===l.getFullYear()&&t.getMonth()===l.getMonth()}).forEach(e=>s+=e.amount),n.forEach(e=>{if("income"===e.type)o+=e.amount;else if("expense"===e.type){i+=e.amount;let t=e.category||"Other";void 0!==r[t]?r[t]+=e.amount:(r.Other||(r.Other=0),r.Other+=e.amount)}});let c=document.createElement("div");c.className="monthly-view-summary-grid grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6";let d="";i>s&&s>=0?d=`<i class="fas fa-arrow-up text-indicator-bad spending-indicator" title="More than last month (${formatCurrency(s)})"></i>`:i<s&&s>0&&(d=`<i class="fas fa-arrow-down text-indicator-good spending-indicator" title="Less than last month (${formatCurrency(s)})"></i>`),c.innerHTML=`
-      <div class="monthly-view-summary-card"><p class="text-sm text-gray-400 mb-1">Total Income</p><p class="text-xl font-semibold text-income">${formatCurrency(o)}</p></div>
-      <div class="monthly-view-summary-card"><p class="text-sm text-gray-400 mb-1">Total Expenses ${d}</p><p class="text-xl font-semibold text-expense">${formatCurrency(i)}</p></div>
-      <div class="monthly-view-summary-card"><p class="text-sm text-gray-400 mb-1">Net Flow</p><p class="text-xl font-semibold ${o-i>=0?"text-income":"text-expense"}">${formatCurrency(o-i)}</p></div>`,a.appendChild(c);let u=document.createElement("div");u.className="monthly-view-content-grid grid grid-cols-1 md:grid-cols-5 gap-6";let m=document.createElement("div");if(m.className="md:col-span-3 space-y-4",m.innerHTML='<h3 class="text-lg font-semibold mb-3">Transactions</h3>',0===n.length)m.innerHTML+='<p class="text-gray-400 text-center py-4">No transactions for this month.</p>';else{let p=n.reduce((e,t)=>{let a=new Date(t.date).toLocaleDateString("en-CA");return e[a]||(e[a]={date:new Date(t.date+"T00:00:00"),transactions:[],dailyTotalExpense:0}),e[a].transactions.push(t),"expense"===t.type&&(e[a].dailyTotalExpense+=t.amount),e},{}),f=Object.values(p).sort((e,t)=>t.date-e.date),g=document.createElement("div");g.className="max-h-[60vh] overflow-y-auto pr-2",f.forEach(e=>{let t=document.createElement("div");t.className="monthly-view-day-group";let a=document.createElement("div");a.className="monthly-view-day-header",a.innerHTML=`<span>${e.date.toLocaleDateString("en-US",{weekday:"short",day:"numeric",month:"short"})}</span><span class="text-sm text-expense">Spent: ${formatCurrency(e.dailyTotalExpense)}</span>`,t.appendChild(a),e.transactions.sort((e,t)=>t.timestamp-e.timestamp).forEach(e=>{let a=document.createElement("div");a.className="monthly-view-transaction-item";let n=state.accounts.find(t=>t.id===e.account),o=n?n.name:"Unknown",i="income"===e.type,r=i?"text-income":"text-expense",s=i?o:e.category||"Uncategorized";a.innerHTML=`
+        `;
+
+  openFormModal("Edit Transaction", formHtml, handleEditTransactionModalSubmit);
+  const typeSelectInModal = document.getElementById("modalTransactionType");
+  if (typeSelectInModal) {
+    toggleCategoryVisibilityInModal(
+      typeSelectInModal,
+      "modalCategoryGroup",
+      "modalCategory"
+    );
+  }
+}
+
+function handleEditTransactionModalSubmit(event) {
+  event.preventDefault();
+  const form = event.target;
+  const formData = new FormData(form);
+  const transactionId = formData.get("editTransactionId");
+
+  const transaction = state.transactions.find((t) => t.id === transactionId);
+  if (!transaction) {
+    showNotification("Transaction to edit not found.", "error");
+    closeModal("formModal");
+    return;
+  }
+  const originalDate = transaction.date;
+
+  const newType = formData.get("transactionType");
+  const newAmount = parseFloat(formData.get("amount"));
+  const newAccountId = formData.get("account");
+  const newCategory = newType === "expense" ? formData.get("category") : null;
+  const newDescription = formData.get("description").trim();
+  const newDate = formData.get("date");
+
+  if (isNaN(newAmount) || newAmount <= 0) {
+    showNotification("Valid amount required.", "error");
+    return;
+  }
+  if (!newAccountId) {
+    showNotification("Account required.", "error");
+    return;
+  }
+  if (newType === "expense" && !newCategory) {
+    showNotification("Category required for expense.", "error");
+    return;
+  }
+  if (!newDescription) {
+    showNotification("Description required.", "error");
+    return;
+  }
+  if (!newDate) {
+    showNotification("Date required.", "error");
+    return;
+  }
+
+  const oldAccount = state.accounts.find(
+    (acc) => acc.id === transaction.account
+  );
+  if (oldAccount) {
+    if (transaction.type === "income") oldAccount.balance -= transaction.amount;
+    else oldAccount.balance += transaction.amount;
+    if (isNaN(oldAccount.balance)) oldAccount.balance = 0;
+  }
+
+  transaction.type = newType;
+  transaction.amount = newAmount;
+  transaction.account = newAccountId;
+  transaction.category = newCategory;
+  transaction.description = newDescription;
+  transaction.date = newDate;
+  transaction.timestamp = Date.now();
+
+  const newAccount = state.accounts.find((acc) => acc.id === newAccountId);
+  if (newAccount) {
+    if (newType === "income") newAccount.balance += newAmount;
+    else newAccount.balance -= newAmount;
+    if (isNaN(newAccount.balance)) newAccount.balance = 0;
+    if (
+      newAccount.balance < 0 &&
+      (oldAccount?.id !== newAccount.id || newType === "expense")
+    ) {
+      showNotification(
+        `Warning: ${newAccount.name} now has a negative balance.`,
+        "warning"
+      );
+    }
+  } else {
+    showNotification(
+      "New account not found. Transaction update may be incomplete.",
+      "error"
+    );
+  }
+
+  saveData();
+  renderDashboard();
+  populateDropdowns();
+  closeModal("formModal");
+  showNotification("Transaction updated successfully.", "success");
+  refreshMonthlyViewIfRelevant(newDate);
+  if (originalDate !== newDate) {
+    refreshMonthlyViewIfRelevant(originalDate);
+  }
+}
+
+function deleteTransaction(id, event) {
+  if (event) event.stopPropagation();
+  const transactionIndex = state.transactions.findIndex((t) => t.id === id);
+  if (transactionIndex === -1) return;
+  const transaction = state.transactions[transactionIndex];
+  const account = state.accounts.find((acc) => acc.id === transaction.account);
+  if (
+    confirm(
+      `Delete: "${transaction.description}" (${formatCurrency(
+        transaction.amount
+      )})?`
+    )
+  ) {
+    if (account) {
+      if (transaction.type === "income") account.balance -= transaction.amount;
+      else account.balance += transaction.amount;
+      if (isNaN(account.balance)) account.balance = 0;
+    }
+    const deletedDate = transaction.date;
+    state.transactions.splice(transactionIndex, 1);
+    saveData();
+    renderDashboard();
+    populateDropdowns();
+    showNotification("Transaction deleted.", "success");
+    refreshMonthlyViewIfRelevant(deletedDate);
+  }
+}
+
+function handleTransferSubmit(event) {
+  event.preventDefault();
+  const form = event.target,
+    formData = new FormData(form);
+  const amount = parseFloat(formData.get("transferAmount")),
+    fromAccountId = formData.get("transferFrom"),
+    toAccountId = formData.get("transferTo");
+  const errorEl = $("#transferError");
+  errorEl.classList.add("hidden");
+  if (isNaN(amount) || amount <= 0) {
+    showNotification("Valid amount required.", "error");
+    return;
+  }
+  if (fromAccountId === toAccountId) {
+    errorEl.classList.remove("hidden");
+    showNotification("Cannot transfer to same account.", "error");
+    return;
+  }
+  const fromAccount = state.accounts.find((acc) => acc.id === fromAccountId);
+  const toAccount = state.accounts.find((acc) => acc.id === toAccountId);
+  if (!fromAccount || !toAccount) {
+    showNotification("Invalid account.", "error");
+    return;
+  }
+  if (fromAccount.balance < amount) {
+    showNotification(`Insufficient funds in ${fromAccount.name}.`, "warning");
+    return;
+  }
+  fromAccount.balance -= amount;
+  toAccount.balance += amount;
+  if (isNaN(fromAccount.balance)) fromAccount.balance = 0;
+  if (isNaN(toAccount.balance)) toAccount.balance = 0;
+  saveData();
+  renderDashboard();
+  populateDropdowns();
+  form.reset();
+  showNotification(
+    `Transferred ${formatCurrency(amount)} from ${fromAccount.name} to ${
+      toAccount.name
+    }.`,
+    "success"
+  );
+}
+
+function refreshMonthlyViewIfRelevant(dateString) {
+  const monthlyViewModal = $("#monthlyViewModal"),
+    activeTab = $("#monthTabs .tab-button.active");
+  if (monthlyViewModal.style.display === "block" && activeTab) {
+    const selectedMonth = parseInt(activeTab.dataset.month),
+      selectedYear = parseInt(activeTab.dataset.year);
+    const transactionDate = new Date(dateString + "T00:00:00");
+    if (
+      !isNaN(transactionDate.getTime()) &&
+      transactionDate.getFullYear() === selectedYear &&
+      transactionDate.getMonth() === selectedMonth
+    ) {
+      renderMonthlyDetails(selectedMonth, selectedYear);
+    }
+  }
+}
+
+// --- MONTHLY VIEW LOGIC ---
+let monthlyPieChartInstance = null;
+
+function setupMonthlyView() {
+  const yearSelector = $("#yearSelector"),
+    currentYear = new Date().getFullYear();
+  const years = new Set(
+    state.transactions.map((t) => new Date(t.date).getFullYear())
+  );
+  years.add(currentYear);
+  yearSelector.innerHTML = "";
+  [...years]
+    .sort((a, b) => b - a)
+    .forEach((year) => {
+      const option = document.createElement("option");
+      option.value = year;
+      option.textContent = year;
+      if (year === currentYear) option.selected = true;
+      yearSelector.appendChild(option);
+    });
+  yearSelector.addEventListener("change", () => {
+    renderMonthTabs(parseInt(yearSelector.value));
+    $("#monthlyDetailsContainer").innerHTML =
+      '<p class="text-center text-gray-400">Select a month to view details.</p>';
+    if (monthlyPieChartInstance) {
+      monthlyPieChartInstance.destroy();
+      monthlyPieChartInstance = null;
+    }
+  });
+  renderMonthTabs(parseInt(yearSelector.value));
+}
+
+function renderMonthTabs(year) {
+  const monthTabsContainer = $("#monthTabs");
+  monthTabsContainer.innerHTML = "";
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+  months.forEach((monthName, index) => {
+    const button = document.createElement("button");
+    button.className = "tab-button !px-3 !py-1.5 !text-sm";
+    button.textContent = monthName;
+    button.dataset.month = index;
+    button.dataset.year = year;
+    button.onclick = () => {
+      $$("#monthTabs .tab-button").forEach((btn) =>
+        btn.classList.remove("active")
+      );
+      button.classList.add("active");
+      renderMonthlyDetails(index, year);
+    };
+    monthTabsContainer.appendChild(button);
+  });
+}
+
+function renderMonthlyDetails(month, year) {
+  const container = $("#monthlyDetailsContainer");
+  container.innerHTML = ""; // Clear previous content
+
+  // Filter transactions for the selected month and year
+  const transactionsInMonth = state.transactions
+    .filter((t) => {
+      const tDate = new Date(t.date + "T00:00:00"); // Ensure date is parsed as local
+      return (
+        !isNaN(tDate.getTime()) &&
+        tDate.getFullYear() === year &&
+        tDate.getMonth() === month
+      );
+    })
+    .sort(
+      (a, b) =>
+        new Date(b.date).setHours(0, 0, 0, 0) -
+          new Date(a.date).setHours(0, 0, 0, 0) || b.timestamp - a.timestamp
+    );
+
+  let totalIncome = 0;
+  let totalExpense = 0;
+  const categoryTotals = {};
+  state.categories.forEach((cat) => (categoryTotals[cat] = 0));
+
+  let lastMonthTotalExpense = 0;
+  const lastMonthDate = new Date(year, month - 1, 1);
+  state.transactions
+    .filter((t) => {
+      const tDate = new Date(t.date + "T00:00:00");
+      return (
+        t.type === "expense" &&
+        !isNaN(tDate.getTime()) &&
+        tDate.getFullYear() === lastMonthDate.getFullYear() &&
+        tDate.getMonth() === lastMonthDate.getMonth()
+      );
+    })
+    .forEach((t) => (lastMonthTotalExpense += t.amount));
+
+  transactionsInMonth.forEach((t) => {
+    if (t.type === "income") {
+      totalIncome += t.amount;
+    } else if (t.type === "expense") {
+      totalExpense += t.amount;
+      const category = t.category || "Other";
+      if (categoryTotals[category] !== undefined) {
+        categoryTotals[category] += t.amount;
+      } else {
+        if (!categoryTotals["Other"]) categoryTotals["Other"] = 0;
+        categoryTotals["Other"] += t.amount;
+      }
+    }
+  });
+
+  const summaryGrid = document.createElement("div");
+  summaryGrid.className =
+    "monthly-view-summary-grid grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6";
+  let monthSpendingIndicatorHtml = "";
+  if (totalExpense > lastMonthTotalExpense && lastMonthTotalExpense >= 0) {
+    monthSpendingIndicatorHtml = `<i class="fas fa-arrow-up text-indicator-bad spending-indicator" title="More than last month (${formatCurrency(
+      lastMonthTotalExpense
+    )})"></i>`;
+  } else if (
+    totalExpense < lastMonthTotalExpense &&
+    lastMonthTotalExpense > 0
+  ) {
+    monthSpendingIndicatorHtml = `<i class="fas fa-arrow-down text-indicator-good spending-indicator" title="Less than last month (${formatCurrency(
+      lastMonthTotalExpense
+    )})"></i>`;
+  }
+  summaryGrid.innerHTML = `
+      <div class="monthly-view-summary-card"><p class="text-sm text-gray-400 mb-1">Total Income</p><p class="text-xl font-semibold text-income">${formatCurrency(
+        totalIncome
+      )}</p></div>
+      <div class="monthly-view-summary-card"><p class="text-sm text-gray-400 mb-1">Total Expenses ${monthSpendingIndicatorHtml}</p><p class="text-xl font-semibold text-expense">${formatCurrency(
+    totalExpense
+  )}</p></div>
+      <div class="monthly-view-summary-card"><p class="text-sm text-gray-400 mb-1">Net Flow</p><p class="text-xl font-semibold ${
+        totalIncome - totalExpense >= 0 ? "text-income" : "text-expense"
+      }">${formatCurrency(totalIncome - totalExpense)}</p></div>`;
+  container.appendChild(summaryGrid);
+
+  const contentGrid = document.createElement("div");
+  contentGrid.className =
+    "monthly-view-content-grid grid grid-cols-1 md:grid-cols-5 gap-6";
+
+  const transactionListSection = document.createElement("div");
+  transactionListSection.className = "md:col-span-3 space-y-4";
+  transactionListSection.innerHTML = `<h3 class="text-lg font-semibold mb-3">Transactions</h3>`;
+
+  if (transactionsInMonth.length === 0) {
+    transactionListSection.innerHTML +=
+      '<p class="text-gray-400 text-center py-4">No transactions for this month.</p>';
+  } else {
+    const transactionsByDay = transactionsInMonth.reduce((acc, t) => {
+      const dayKey = new Date(t.date).toLocaleDateString("en-CA");
+      if (!acc[dayKey]) {
+        acc[dayKey] = {
+          date: new Date(t.date + "T00:00:00"),
+          transactions: [],
+          dailyTotalExpense: 0,
+        };
+      }
+      acc[dayKey].transactions.push(t);
+      if (t.type === "expense") acc[dayKey].dailyTotalExpense += t.amount;
+      return acc;
+    }, {});
+
+    const sortedDays = Object.values(transactionsByDay).sort(
+      (a, b) => b.date - a.date
+    );
+    const listContainer = document.createElement("div");
+    listContainer.className = "max-h-[60vh] overflow-y-auto pr-2";
+
+    sortedDays.forEach((dayData) => {
+      const dayGroup = document.createElement("div");
+      dayGroup.className = "monthly-view-day-group";
+      const dayHeader = document.createElement("div");
+      dayHeader.className = "monthly-view-day-header";
+      dayHeader.innerHTML = `<span>${dayData.date.toLocaleDateString("en-US", {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+      })}</span><span class="text-sm text-expense">Spent: ${formatCurrency(
+        dayData.dailyTotalExpense
+      )}</span>`;
+      dayGroup.appendChild(dayHeader);
+
+      dayData.transactions
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .forEach((t) => {
+          const itemDiv = document.createElement("div");
+          itemDiv.className = "monthly-view-transaction-item";
+          const account = state.accounts.find((a) => a.id === t.account);
+          const accountName = account ? account.name : "Unknown";
+          const isIncome = t.type === "income";
+          const textColorClass = isIncome ? "text-income" : "text-expense";
+          const subDetailText = !isIncome
+            ? t.category || "Uncategorized"
+            : accountName;
+
+          itemDiv.innerHTML = `
                   <div class="flex-grow mr-2 overflow-hidden">
-                      <p class="font-medium truncate ${r}" title="${e.description}">${e.description}</p>
-                      <p class="text-xs text-gray-400 mt-0.5">${s}</p>
+                      <p class="font-medium truncate ${textColorClass}" title="${
+            t.description
+          }">${t.description}</p>
+                      <p class="text-xs text-gray-400 mt-0.5">${subDetailText}</p>
                   </div>
-                  <span class="font-semibold whitespace-nowrap ${r} ml-2">${i?"+":"-"}${formatCurrency(e.amount)}</span>
+                  <span class="font-semibold whitespace-nowrap ${textColorClass} ml-2">${
+            isIncome ? "+" : "-"
+          }${formatCurrency(t.amount)}</span>
                   <div class="edit-btn-container flex-shrink-0 ml-2">
-                      <button class="text-xs accent-text hover:text-accent-hover focus:outline-none" onclick="openEditTransactionForm('${e.id}', event)" title="Edit"><i class="fas fa-edit"></i></button>
-                      <button class="text-xs text-gray-500 hover:text-expense focus:outline-none" onclick="deleteTransaction('${e.id}', event)" title="Delete"><i class="fas fa-times"></i></button>
-                  </div>`,t.appendChild(a)}),g.appendChild(t)}),m.appendChild(g)}u.appendChild(m);let y=document.createElement("div");y.className="md:col-span-2 space-y-4";let b=document.createElement("div");b.className="p-4 rounded-lg",b.style.backgroundColor="var(--bg-tertiary)",b.innerHTML='<h3 class="text-lg font-semibold mb-3">Category Summary</h3>';let h=document.createElement("ul");h.className="monthly-view-category-list space-y-1 text-sm max-h-48 overflow-y-auto pr-2";let v=Object.entries(r).filter(([e,t])=>t>0).sort(([,e],[,t])=>t-e);if(v.length>0?v.forEach(([e,t])=>{let a=document.createElement("li");a.innerHTML=`<span class="truncate pr-2" title="${e}">${e}</span><span class="font-medium whitespace-nowrap">${formatCurrency(t)}</span>`,h.appendChild(a)}):h.innerHTML='<li class="text-gray-400 text-sm">No expenses in any category this month.</li>',b.appendChild(h),y.appendChild(b),v.length>0){monthlyPieChartInstance&&(monthlyPieChartInstance.destroy(),monthlyPieChartInstance=null);let C=document.createElement("div");C.className="p-4 rounded-lg h-96 md:h-[450px] flex flex-col",C.style.backgroundColor="var(--bg-tertiary)";let w=document.createElement("h3");w.className="text-lg font-semibold mb-3 text-center",w.textContent="Category Distribution",C.appendChild(w);let x=document.createElement("div");x.className="flex-grow relative chart-container";let D=document.createElement("canvas");D.id="monthlyDetailPieChartCanvas",x.appendChild(D),C.appendChild(x),y.appendChild(C);let A={labels:v.map(([e,t])=>e),values:v.map(([e,t])=>t)};setTimeout(()=>renderMonthlyPieChart(A),100)}else{let S=document.createElement("div");S.className="p-4 rounded-lg h-72 md:h-80 flex items-center justify-center",S.style.backgroundColor="var(--bg-tertiary)",S.innerHTML='<p class="text-gray-400 text-sm">No expense data for chart.</p>',y.appendChild(S),monthlyPieChartInstance&&(monthlyPieChartInstance.destroy(),monthlyPieChartInstance=null)}u.appendChild(y),a.appendChild(u)}function renderMonthlyPieChart(e){let t=document.getElementById("monthlyDetailPieChartCanvas");if(!t||!t.getContext){console.error("Canvas for monthly pie chart (id: monthlyDetailPieChartCanvas) not found or invalid."),monthlyPieChartInstance&&(monthlyPieChartInstance.destroy(),monthlyPieChartInstance=null);return}let a=t.getContext("2d"),n=["#e67e26","#2a9d8f","#e74c3c","#3498db","#f1c40f","#9b59b6","#34495e","#1abc9c","#7f8c8d","#2ecc71","#d35400","#27ae60","#c0392b",],o=e.labels.map((e,t)=>n[t%n.length]);monthlyPieChartInstance?(monthlyPieChartInstance.data.labels=e.labels,monthlyPieChartInstance.data.datasets[0].data=e.values,monthlyPieChartInstance.data.datasets[0].backgroundColor=o,monthlyPieChartInstance.update()):monthlyPieChartInstance=new Chart(a,{type:"pie",data:{labels:e.labels,datasets:[{label:"Expenses by Category",data:e.values,backgroundColor:o,borderColor:"var(--bg-secondary)",borderWidth:1,hoverOffset:8,hoverBorderColor:"var(--text-primary)"},]},options:{responsive:!0,maintainAspectRatio:!1,plugins:{legend:{display:!1},tooltip:{backgroundColor:"rgba(0,0,0,0.85)",titleColor:"#fff",bodyColor:"#fff",padding:12,cornerRadius:4,usePointStyle:!0,callbacks:{label:function(e){let t=e.label||"";if(t&&(t+=": "),null!==e.parsed){t+=formatCurrency(e.parsed);let a=e.chart.getDatasetMeta(0),n=a.total||a.data.reduce((e,t)=>e+t.raw,0),o=n>0?(e.parsed/n*100).toFixed(1)+"%":"0.0%";t+=` (${o})`}return t}}}}}})}function renderCreditCardSection(){let e=state.creditCard.limit||0,t=state.creditCard.transactions||[];$("#ccLimit").textContent=formatCurrency(e);let a=t.filter(e=>!e.paidOff).reduce((e,t)=>e+t.amount-(t.paidAmount||0),0),n=e-a,o=$("#ccAvailable");o.textContent=formatCurrency(n),o.classList.toggle("text-danger",n<0),o.classList.toggle("accent-text",n>=0)}function openCcHistoryModal(){let e=$("#ccHistoryModal"),t=$("#ccHistoryListContainer");if(!e||!t)return;let a=state.creditCard.limit||0,n=state.creditCard.transactions||[];$("#ccHistoryLimit").textContent=formatCurrency(a);let o=n.filter(e=>!e.paidOff).reduce((e,t)=>e+t.amount-(t.paidAmount||0),0),i=a-o;$("#ccHistorySpentUnpaid").textContent=formatCurrency(o);let r=$("#ccHistoryAvailable");r.textContent=formatCurrency(i),r.classList.toggle("text-expense",i<0),r.classList.toggle("accent-text",i>=0),t.innerHTML="";let s=[...n].sort((e,t)=>new Date(t.date).setHours(0,0,0,0)-new Date(e.date).setHours(0,0,0,0)||t.timestamp-e.timestamp);0===s.length?t.innerHTML='<p class="text-gray-400 text-sm text-center py-4">No CC transactions.</p>':s.forEach(e=>{let a=document.createElement("div");a.className=`flex justify-between items-center p-3 border-b border-gray-700 text-sm ${e.paidOff?"opacity-60":""}`;let n=e.amount-(e.paidAmount||0);a.innerHTML=`
+                      <button class="text-xs accent-text hover:text-accent-hover focus:outline-none" onclick="openEditTransactionForm('${
+                        t.id
+                      }', event)" title="Edit"><i class="fas fa-edit"></i></button>
+                      <button class="text-xs text-gray-500 hover:text-expense focus:outline-none" onclick="deleteTransaction('${
+                        t.id
+                      }', event)" title="Delete"><i class="fas fa-times"></i></button>
+                  </div>`;
+          dayGroup.appendChild(itemDiv);
+        });
+      listContainer.appendChild(dayGroup);
+    });
+    transactionListSection.appendChild(listContainer);
+  }
+  contentGrid.appendChild(transactionListSection);
+
+  const categorySection = document.createElement("div");
+  categorySection.className = "md:col-span-2 space-y-4";
+
+  const summaryCard = document.createElement("div");
+  // --- MODIFIED: Changed background from bg-gray-800 to use CSS variable ---
+  summaryCard.className = "p-4 rounded-lg"; // Removed bg-gray-800
+  summaryCard.style.backgroundColor = "var(--bg-tertiary)"; // Added style for background
+  // --- END OF MODIFICATION ---
+  summaryCard.innerHTML = `<h3 class="text-lg font-semibold mb-3">Category Summary</h3>`;
+  const categoryList = document.createElement("ul");
+  categoryList.className =
+    "monthly-view-category-list space-y-1 text-sm max-h-48 overflow-y-auto pr-2";
+  const sortedCategories = Object.entries(categoryTotals)
+    .filter(([_, amount]) => amount > 0)
+    .sort(([, a], [, b]) => b - a);
+
+  if (sortedCategories.length > 0) {
+    sortedCategories.forEach(([category, amount]) => {
+      const li = document.createElement("li");
+      li.innerHTML = `<span class="truncate pr-2" title="${category}">${category}</span><span class="font-medium whitespace-nowrap">${formatCurrency(
+        amount
+      )}</span>`;
+      categoryList.appendChild(li);
+    });
+  } else {
+    categoryList.innerHTML =
+      '<li class="text-gray-400 text-sm">No expenses in any category this month.</li>';
+  }
+  summaryCard.appendChild(categoryList);
+  categorySection.appendChild(summaryCard);
+
+  // Category Distribution Pie Chart Card
+  if (sortedCategories.length > 0) {
+    if (monthlyPieChartInstance) {
+      monthlyPieChartInstance.destroy();
+      monthlyPieChartInstance = null;
+    }
+
+    const chartCard = document.createElement("div");
+    // --- MODIFIED: Changed background from bg-gray-800 to use CSS variable ---
+    chartCard.className = "p-4 rounded-lg h-96 md:h-[450px] flex flex-col"; // Removed bg-gray-800
+    chartCard.style.backgroundColor = "var(--bg-tertiary)"; // Added style for background
+    // --- END OF MODIFICATION ---
+
+    const titleEl = document.createElement("h3");
+    titleEl.className = "text-lg font-semibold mb-3 text-center";
+    titleEl.textContent = "Category Distribution";
+    chartCard.appendChild(titleEl);
+
+    const canvasContainer = document.createElement("div");
+    canvasContainer.className = "flex-grow relative chart-container";
+
+    const canvas = document.createElement("canvas");
+    canvas.id = "monthlyDetailPieChartCanvas"; // Fixed ID
+
+    canvasContainer.appendChild(canvas);
+    chartCard.appendChild(canvasContainer);
+    categorySection.appendChild(chartCard);
+
+    const pieData = {
+      labels: sortedCategories.map(([c, _]) => c),
+      values: sortedCategories.map(([_, a]) => a),
+    };
+    setTimeout(() => renderMonthlyPieChart(pieData), 100);
+  } else {
+    // If no expenses, show a placeholder and ensure any old chart instance is destroyed
+    const noChartCard = document.createElement("div");
+    // --- MODIFIED: Changed background from bg-gray-800 to use CSS variable ---
+    noChartCard.className =
+      "p-4 rounded-lg h-72 md:h-80 flex items-center justify-center"; // Removed bg-gray-800
+    noChartCard.style.backgroundColor = "var(--bg-tertiary)"; // Added style for background
+    // --- END OF MODIFICATION ---
+    noChartCard.innerHTML =
+      '<p class="text-gray-400 text-sm">No expense data for chart.</p>';
+    categorySection.appendChild(noChartCard);
+
+    if (monthlyPieChartInstance) {
+      monthlyPieChartInstance.destroy();
+      monthlyPieChartInstance = null;
+    }
+  }
+  contentGrid.appendChild(categorySection);
+  container.appendChild(contentGrid);
+}
+
+function renderMonthlyPieChart(data) {
+  const canvas = document.getElementById("monthlyDetailPieChartCanvas"); // Use fixed ID
+  if (!canvas || !canvas.getContext) {
+    console.error(
+      "Canvas for monthly pie chart (id: monthlyDetailPieChartCanvas) not found or invalid."
+    );
+    // If canvas is not found (e.g. no expenses, so it wasn't added to DOM), destroy old instance if any
+    if (monthlyPieChartInstance) {
+      monthlyPieChartInstance.destroy();
+      monthlyPieChartInstance = null;
+    }
+    return;
+  }
+  const ctx = canvas.getContext("2d");
+
+  const brandPiePalette = [
+    "#e67e26",
+    "#2a9d8f",
+    "#e74c3c",
+    "#3498db",
+    "#f1c40f",
+    "#9b59b6",
+    "#34495e",
+    "#1abc9c",
+    "#7f8c8d",
+    "#2ecc71",
+    "#d35400",
+    "#27ae60",
+    "#c0392b",
+  ];
+  const backgroundColors = data.labels.map(
+    (_, index) => brandPiePalette[index % brandPiePalette.length]
+  );
+
+  if (monthlyPieChartInstance) {
+    // If chart instance exists, update its data
+    monthlyPieChartInstance.data.labels = data.labels;
+    monthlyPieChartInstance.data.datasets[0].data = data.values;
+    monthlyPieChartInstance.data.datasets[0].backgroundColor = backgroundColors;
+    monthlyPieChartInstance.update();
+  } else {
+    // If chart instance doesn't exist, create it
+    monthlyPieChartInstance = new Chart(ctx, {
+      type: "pie",
+      data: {
+        labels: data.labels,
+        datasets: [
+          {
+            label: "Expenses by Category",
+            data: data.values,
+            backgroundColor: backgroundColors,
+            borderColor: "var(--bg-secondary)", // Use CSS variable for border
+            borderWidth: 1,
+            hoverOffset: 8,
+            hoverBorderColor: "var(--text-primary)", // Use CSS variable
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            // --- KEY CHANGE: Set display to false to hide the legend ---
+            display: false,
+            // --- END OF KEY CHANGE ---
+            // position: 'bottom', // No longer needed if display is false
+            // labels: { // No longer needed if display is false
+            // color: 'var(--text-secondary)',
+            // padding: 10,
+            // boxWidth: 12,
+            // font: { size: 10 }
+            // }
+          },
+          tooltip: {
+            backgroundColor: "rgba(0,0,0,0.85)",
+            titleColor: "#fff",
+            bodyColor: "#fff",
+            padding: 12,
+            cornerRadius: 4,
+            usePointStyle: true,
+            callbacks: {
+              label: function (context) {
+                let label = context.label || "";
+                if (label) {
+                  label += ": ";
+                }
+                if (context.parsed !== null) {
+                  label += formatCurrency(context.parsed);
+                  // Ensure getDatasetMeta(0).total is available or fallback for percentage calculation
+                  const datasetMeta = context.chart.getDatasetMeta(0);
+                  const total =
+                    datasetMeta.total ||
+                    datasetMeta.data.reduce((sum, el) => sum + el.raw, 0);
+                  const percentage =
+                    total > 0
+                      ? ((context.parsed / total) * 100).toFixed(1) + "%"
+                      : "0.0%";
+                  label += ` (${percentage})`;
+                }
+                return label;
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+}
+
+// --- CREDIT CARD LOGIC ---
+function renderCreditCardSection() {
+  const limit = state.creditCard.limit || 0,
+    transactions = state.creditCard.transactions || [];
+  $("#ccLimit").textContent = formatCurrency(limit);
+  const spentUnpaid = transactions
+    .filter((t) => !t.paidOff)
+    .reduce((sum, t) => sum + t.amount - (t.paidAmount || 0), 0);
+  const available = limit - spentUnpaid,
+    availableEl = $("#ccAvailable");
+  availableEl.textContent = formatCurrency(available);
+  availableEl.classList.toggle("text-danger", available < 0);
+  availableEl.classList.toggle("accent-text", available >= 0);
+}
+
+function openCcHistoryModal() {
+  const modal = $("#ccHistoryModal"),
+    listContainer = $("#ccHistoryListContainer");
+  if (!modal || !listContainer) return;
+
+  const limit = state.creditCard.limit || 0,
+    transactions = state.creditCard.transactions || [];
+  $("#ccHistoryLimit").textContent = formatCurrency(limit);
+  const spentUnpaid = transactions
+    .filter((t) => !t.paidOff)
+    .reduce((sum, t) => sum + t.amount - (t.paidAmount || 0), 0);
+  const available = limit - spentUnpaid;
+  $("#ccHistorySpentUnpaid").textContent = formatCurrency(spentUnpaid);
+  const availableEl = $("#ccHistoryAvailable");
+  availableEl.textContent = formatCurrency(available);
+  availableEl.classList.toggle("text-expense", available < 0); // Use text-expense
+  availableEl.classList.toggle("accent-text", available >= 0); // Use accent-text (orange)
+
+  listContainer.innerHTML = "";
+  const sortedTransactions = [...transactions].sort(
+    (a, b) =>
+      new Date(b.date).setHours(0, 0, 0, 0) -
+        new Date(a.date).setHours(0, 0, 0, 0) || b.timestamp - a.timestamp
+  );
+
+  if (sortedTransactions.length === 0) {
+    listContainer.innerHTML =
+      '<p class="text-gray-400 text-sm text-center py-4">No CC transactions.</p>';
+  } else {
+    sortedTransactions.forEach((t) => {
+      const div = document.createElement("div");
+      div.className = `flex justify-between items-center p-3 border-b border-gray-700 text-sm ${
+        t.paidOff ? "opacity-60" : ""
+      }`;
+      const remainingOnItem = t.amount - (t.paidAmount || 0);
+      div.innerHTML = `
                     <div class="cc-history-item-details flex-grow mr-3 overflow-hidden">
-                        <p class="cc-history-item-description ${e.paidOff?"text-gray-500":""}" title="${e.description}">${e.description}</p>
-                        <p class="cc-history-item-date">${new Date(e.date).toLocaleDateString()} ${e.paidAmount>0&&!e.paidOff?`(Paid: ${formatCurrency(e.paidAmount)})`:""}</p>
+                        <p class="cc-history-item-description ${
+                          t.paidOff ? "text-gray-500" : ""
+                        }" title="${t.description}">${t.description}</p>
+                        <p class="cc-history-item-date">${new Date(
+                          t.date
+                        ).toLocaleDateString()} ${
+        t.paidAmount > 0 && !t.paidOff
+          ? `(Paid: ${formatCurrency(t.paidAmount)})`
+          : ""
+      }</p>
                     </div>
                     <div class="flex items-center flex-shrink-0">
-                        <span class="font-semibold mr-3 ${e.paidOff?"text-gray-500":n<=.005?"text-income":"text-expense"}">
-                            ${e.paidOff?formatCurrency(e.amount):formatCurrency(n)} ${e.paidOff?"":n<=.005?" (Settled)":" Left"}
+                        <span class="font-semibold mr-3 ${
+                          t.paidOff
+                            ? "text-gray-500"
+                            : remainingOnItem <= 0.005
+                            ? "text-income"
+                            : "text-expense"
+                        }">
+                            ${
+                              t.paidOff
+                                ? formatCurrency(t.amount)
+                                : formatCurrency(remainingOnItem)
+                            } ${
+        t.paidOff ? "" : remainingOnItem <= 0.005 ? " (Settled)" : " Left"
+      }
                         </span>
                         <div class="edit-btn-container">
-                            ${!e.paidOff&&n>.005?`<button class="text-xs text-income hover:opacity-80 focus:outline-none mr-1" onclick="openPayCcItemForm('${e.id}')" title="Pay Item"><i class="fas fa-dollar-sign"></i></button>`:""}
-                            <button class="text-xs accent-text hover:text-accent-hover focus:outline-none mr-1" onclick="openEditCcTransactionForm('${e.id}')" title="Edit"><i class="fas fa-edit"></i></button>
-                            <button class="text-gray-500 hover:text-expense text-xs focus:outline-none" onclick="deleteCcTransaction('${e.id}')" title="Delete"><i class="fas fa-times"></i></button>
+                            ${
+                              !t.paidOff && remainingOnItem > 0.005
+                                ? `<button class="text-xs text-income hover:opacity-80 focus:outline-none mr-1" onclick="openPayCcItemForm('${t.id}')" title="Pay Item"><i class="fas fa-dollar-sign"></i></button>`
+                                : ""
+                            }
+                            <button class="text-xs accent-text hover:text-accent-hover focus:outline-none mr-1" onclick="openEditCcTransactionForm('${
+                              t.id
+                            }')" title="Edit"><i class="fas fa-edit"></i></button>
+                            <button class="text-gray-500 hover:text-expense text-xs focus:outline-none" onclick="deleteCcTransaction('${
+                              t.id
+                            }')" title="Delete"><i class="fas fa-times"></i></button>
                         </div>
-                    </div>`,t.appendChild(a)}),e.style.display="block"}function openSetCcLimitForm(){let e=state.creditCard.limit||0;openFormModal("Set Credit Card Limit",`<div><label for="ccLimitAmount" class="block text-sm font-medium mb-1">Credit Limit (LKR)</label><input type="number" id="ccLimitAmount" name="ccLimitAmount" step="0.01" min="0" value="${e.toFixed(2)}" placeholder="Enter total limit" required></div><button type="submit" class="btn btn-primary w-full">Set Limit</button>`,handleSetCcLimitSubmit)}function handleCcTransactionSubmit(e){e.preventDefault();let t=e.target,a=new FormData(t),n=parseFloat(a.get("ccAmount")),o=a.get("ccDescription").trim(),i=a.get("ccDate");if(isNaN(n)||n<=0){showNotification("Valid amount required.","error");return}if(!o){showNotification("Description required.","error");return}if(!i){showNotification("Date required.","error");return}state.creditCard.transactions||(state.creditCard.transactions=[]);let r=Date.now(),s={id:generateId(),amount:n,description:o,date:i,paidAmount:0,paidOff:!1,timestamp:r};state.creditCard.transactions.push(s),showNotification("CC transaction added.","success"),saveData(),renderCreditCardSection(),"block"===$("#ccHistoryModal").style.display&&openCcHistoryModal(),t.reset();let l=t.querySelector("#ccDate");l&&(l.value=new Date().toISOString().split("T")[0])}function openEditCcTransactionModal(e){let t=state.creditCard.transactions.find(t=>t.id===e);if(!t){showNotification("CC Transaction not found for editing.","error");return}"block"===$("#ccHistoryModal").style.display&&closeModal("ccHistoryModal");let a=`
-            <input type="hidden" name="editCcTransactionId" value="${t.id}">
+                    </div>`;
+      listContainer.appendChild(div);
+    });
+  }
+  modal.style.display = "block";
+}
+
+function openSetCcLimitForm() {
+  const currentLimit = state.creditCard.limit || 0;
+  openFormModal(
+    "Set Credit Card Limit",
+    `<div><label for="ccLimitAmount" class="block text-sm font-medium mb-1">Credit Limit (LKR)</label><input type="number" id="ccLimitAmount" name="ccLimitAmount" step="0.01" min="0" value="${currentLimit.toFixed(
+      2
+    )}" placeholder="Enter total limit" required></div><button type="submit" class="btn btn-primary w-full">Set Limit</button>`,
+    handleSetCcLimitSubmit
+  );
+}
+
+function handleCcTransactionSubmit(event) {
+  event.preventDefault();
+  const form = event.target,
+    formData = new FormData(form);
+  const amount = parseFloat(formData.get("ccAmount")),
+    description = formData.get("ccDescription").trim(),
+    date = formData.get("ccDate");
+  if (isNaN(amount) || amount <= 0) {
+    showNotification("Valid amount required.", "error");
+    return;
+  }
+  if (!description) {
+    showNotification("Description required.", "error");
+    return;
+  }
+  if (!date) {
+    showNotification("Date required.", "error");
+    return;
+  }
+  if (!state.creditCard.transactions) state.creditCard.transactions = [];
+  const timestamp = Date.now();
+
+  const newCcTransaction = {
+    id: generateId(),
+    amount,
+    description,
+    date,
+    paidAmount: 0,
+    paidOff: false,
+    timestamp,
+  };
+  state.creditCard.transactions.push(newCcTransaction);
+  showNotification("CC transaction added.", "success");
+
+  saveData();
+  renderCreditCardSection();
+  if ($("#ccHistoryModal").style.display === "block") openCcHistoryModal();
+  form.reset();
+  const ccDateInput = form.querySelector("#ccDate");
+  if (ccDateInput) ccDateInput.value = new Date().toISOString().split("T")[0];
+}
+
+function openEditCcTransactionModal(ccTransactionId) {
+  const transaction = state.creditCard.transactions.find(
+    (tx) => tx.id === ccTransactionId
+  );
+  if (!transaction) {
+    showNotification("CC Transaction not found for editing.", "error");
+    return;
+  }
+  if ($("#ccHistoryModal").style.display === "block") {
+    closeModal("ccHistoryModal");
+  }
+
+  const formHtml = `
+            <input type="hidden" name="editCcTransactionId" value="${
+              transaction.id
+            }">
             <div>
                 <label for="modalCcAmount" class="block text-sm font-medium mb-1">Amount (LKR)</label>
-                <input type="number" id="modalCcAmount" name="ccAmount" value="${t.amount.toFixed(2)}" step="0.01" min="0" placeholder="Amount spent" required>
+                <input type="number" id="modalCcAmount" name="ccAmount" value="${transaction.amount.toFixed(
+                  2
+                )}" step="0.01" min="0" placeholder="Amount spent" required>
             </div>
             <div>
                 <label for="modalCcDescription" class="block text-sm font-medium mb-1">Description</label>
-                <input type="text" id="modalCcDescription" name="ccDescription" value="${t.description}" placeholder="e.g., Online purchase" required>
+                <input type="text" id="modalCcDescription" name="ccDescription" value="${
+                  transaction.description
+                }" placeholder="e.g., Online purchase" required>
             </div>
             <div>
                 <label for="modalCcDate" class="block text-sm font-medium mb-1">Date</label>
-                <input type="date" id="modalCcDate" name="ccDate" value="${t.date}" required>
+                <input type="date" id="modalCcDate" name="ccDate" value="${
+                  transaction.date
+                }" required>
             </div>
             <button type="submit" class="btn btn-primary w-full"><i class="fas fa-save"></i> Update CC Transaction</button>
-        `;openFormModal("Edit CC Transaction",a,handleEditCcTransactionModalSubmit)}function handleEditCcTransactionModalSubmit(e){e.preventDefault();let t=e.target,a=new FormData(t),n=a.get("editCcTransactionId"),o=state.creditCard.transactions.find(e=>e.id===n);if(!o){showNotification("CC Transaction to edit not found.","error"),closeModal("formModal");return}let i=parseFloat(a.get("ccAmount")),r=a.get("ccDescription").trim(),s=a.get("ccDate");if(isNaN(i)||i<=0){showNotification("Valid amount required.","error");return}if(!r){showNotification("Description required.","error");return}if(!s){showNotification("Date required.","error");return}o.amount=i,o.description=r,o.date=s,o.timestamp=Date.now(),o.paidAmount>i&&(o.paidAmount=i),o.paidAmount>=i-.005?(o.paidOff=!0,o.paidAmount=i):o.paidOff=!1,saveData(),renderCreditCardSection(),closeModal("formModal"),showNotification("CC Transaction updated successfully.","success")}function deleteCcTransaction(e){let t=state.creditCard.transactions.findIndex(t=>t.id===e);if(-1===t)return;let a=state.creditCard.transactions[t];confirm(`Delete CC transaction: "${a.description}" (${formatCurrency(a.amount)})? This will also remove any associated payment records made through the app for this specific CC item.`)&&(state.transactions=state.transactions.filter(e=>!("Credit Card Payment"===e.category&&e.description.includes(a.description.substring(0,15)))),state.creditCard.transactions.splice(t,1),saveData(),renderDashboard(),renderCreditCardSection(),"block"===$("#ccHistoryModal").style.display&&openCcHistoryModal(),showNotification("CC transaction and related payments deleted.","success"))}function openAddDebtForm(){openFormModal("Add New Debt",'<div><label for="debtWho" class="block text-sm font-medium mb-1">Who do you owe?</label><input type="text" id="debtWho" name="debtWho" placeholder="e.g., John Doe" required></div><div><label for="debtWhy" class="block text-sm font-medium mb-1">Reason?</label><input type="text" id="debtWhy" name="debtWhy" placeholder="e.g., Loan" required></div><div><label for="debtAmount" class="block text-sm font-medium mb-1">Amount Owed (LKR)</label><input type="number" id="debtAmount" name="debtAmount" step="0.01" min="0.01" required></div><div><label for="debtDueDate" class="block text-sm font-medium mb-1">Due Date</label><input type="date" id="debtDueDate" name="debtDueDate" required></div><button type="submit" class="btn btn-primary w-full">Add Debt</button>',handleAddDebtSubmit);let e=new Date;e.setMonth(e.getMonth()+1);let t=$("#debtDueDate");t&&(t.value=e.toISOString().split("T")[0])}function handleAddDebtSubmit(e){e.preventDefault();let t=new FormData(e.target),a=parseFloat(t.get("debtAmount"));if(isNaN(a)||a<=0){showNotification("Invalid amount.","error");return}let n={id:generateId(),who:t.get("debtWho").trim(),why:t.get("debtWhy").trim(),amount:a,originalAmount:a,remainingAmount:a,dueDate:t.get("debtDueDate"),timestamp:Date.now()};if(!n.who||!n.why||!n.dueDate){showNotification("All fields required.","error");return}state.debts.push(n),saveData(),renderDashboard(),closeModal("formModal"),showNotification("Debt added.","success")}function openEditDebtForm(e){let t=state.debts.find(t=>t.id===e);t&&openFormModal("Edit Debt",` <input type="hidden" name="editDebtId" value="${t.id}"> <div><label class="block text-sm font-medium mb-1">Who</label><input type="text" name="debtWho" value="${t.who}" required></div> <div><label class="block text-sm font-medium mb-1">Why</label><input type="text" name="debtWhy" value="${t.why}" required></div> <div><label class="block text-sm font-medium mb-1">Original Amount</label><input type="number" name="debtOriginalAmount" value="${(t.originalAmount||t.amount).toFixed(2)}" step="0.01" min="0.01" required></div> <div><label class="block text-sm font-medium mb-1">Remaining Amount</label><input type="number" name="debtRemainingAmount" value="${t.remainingAmount.toFixed(2)}" step="0.01" min="0" required></div> <div><label class="block text-sm font-medium mb-1">Due Date</label><input type="date" name="debtDueDate" value="${t.dueDate}" required></div> <button type="submit" class="btn btn-primary w-full">Update Debt</button> `,handleEditDebtSubmit)}function handleEditDebtSubmit(e){e.preventDefault();let t=new FormData(e.target),a=t.get("editDebtId"),n=state.debts.find(e=>e.id===a);if(n){if(n.who=t.get("debtWho").trim(),n.why=t.get("debtWhy").trim(),n.originalAmount=parseFloat(t.get("debtOriginalAmount")),n.remainingAmount=parseFloat(t.get("debtRemainingAmount")),n.dueDate=t.get("debtDueDate"),n.timestamp=Date.now(),isNaN(n.originalAmount)||n.originalAmount<=0||isNaN(n.remainingAmount)||n.remainingAmount<0||n.remainingAmount>n.originalAmount){showNotification("Invalid amounts for debt. Remaining cannot exceed original.","error");return}n.amount=n.originalAmount,saveData(),renderDashboard(),closeModal("formModal"),showNotification("Debt updated.","success")}}function openPayDebtForm(e){let t=state.debts.find(t=>t.id===e);if(!t)return;let a="Debt Repayment",n="",o=state.categories.filter(e=>"income"!==e.toLowerCase()&&"credit card payment"!==e.toLowerCase()&&e.toLowerCase()!==a.toLowerCase()).sort((e,t)=>e.localeCompare(t));state.categories.some(e=>e.toLowerCase()===a.toLowerCase())?n+=`<option value="${a}" selected>${a}</option>`:n+=`<option value="${a}" selected>${a} (Suggested)</option>`,o.forEach(e=>{n+=`<option value="${e}">${e}</option>`});let i=`
-      <p class="mb-2">Owed: <span class="font-semibold">${formatCurrency(t.remainingAmount)}</span> to ${t.who} for ${t.why}</p>
+        `;
+  openFormModal(
+    "Edit CC Transaction",
+    formHtml,
+    handleEditCcTransactionModalSubmit
+  );
+}
+
+function handleEditCcTransactionModalSubmit(event) {
+  event.preventDefault();
+  const form = event.target;
+  const formData = new FormData(form);
+  const ccTransactionId = formData.get("editCcTransactionId");
+
+  const transaction = state.creditCard.transactions.find(
+    (t) => t.id === ccTransactionId
+  );
+  if (!transaction) {
+    showNotification("CC Transaction to edit not found.", "error");
+    closeModal("formModal");
+    return;
+  }
+
+  const newAmount = parseFloat(formData.get("ccAmount"));
+  const newDescription = formData.get("ccDescription").trim();
+  const newDate = formData.get("ccDate");
+
+  if (isNaN(newAmount) || newAmount <= 0) {
+    showNotification("Valid amount required.", "error");
+    return;
+  }
+  if (!newDescription) {
+    showNotification("Description required.", "error");
+    return;
+  }
+  if (!newDate) {
+    showNotification("Date required.", "error");
+    return;
+  }
+
+  transaction.amount = newAmount;
+  transaction.description = newDescription;
+  transaction.date = newDate;
+  transaction.timestamp = Date.now();
+
+  if (transaction.paidAmount > newAmount) {
+    transaction.paidAmount = newAmount;
+  }
+  if (transaction.paidAmount >= newAmount - 0.005) {
+    transaction.paidOff = true;
+    transaction.paidAmount = newAmount;
+  } else {
+    transaction.paidOff = false;
+  }
+
+  saveData();
+  renderCreditCardSection();
+  closeModal("formModal");
+  showNotification("CC Transaction updated successfully.", "success");
+}
+
+function deleteCcTransaction(transactionId) {
+  const transactionIndex = state.creditCard.transactions.findIndex(
+    (t) => t.id === transactionId
+  );
+  if (transactionIndex === -1) return;
+  const transaction = state.creditCard.transactions[transactionIndex];
+  if (
+    confirm(
+      `Delete CC transaction: "${transaction.description}" (${formatCurrency(
+        transaction.amount
+      )})? This will also remove any associated payment records made through the app for this specific CC item.`
+    )
+  ) {
+    state.transactions = state.transactions.filter(
+      (tx) =>
+        !(
+          tx.category === "Credit Card Payment" &&
+          tx.description.includes(transaction.description.substring(0, 15))
+        )
+    );
+    state.creditCard.transactions.splice(transactionIndex, 1);
+    saveData();
+    renderDashboard();
+    renderCreditCardSection();
+    if ($("#ccHistoryModal").style.display === "block") openCcHistoryModal();
+    showNotification("CC transaction and related payments deleted.", "success");
+  }
+}
+
+// --- DEBT/RECEIVABLE/INSTALLMENT LOGIC ---
+function openAddDebtForm() {
+  openFormModal(
+    "Add New Debt",
+    `<div><label for="debtWho" class="block text-sm font-medium mb-1">Who do you owe?</label><input type="text" id="debtWho" name="debtWho" placeholder="e.g., John Doe" required></div><div><label for="debtWhy" class="block text-sm font-medium mb-1">Reason?</label><input type="text" id="debtWhy" name="debtWhy" placeholder="e.g., Loan" required></div><div><label for="debtAmount" class="block text-sm font-medium mb-1">Amount Owed (LKR)</label><input type="number" id="debtAmount" name="debtAmount" step="0.01" min="0.01" required></div><div><label for="debtDueDate" class="block text-sm font-medium mb-1">Due Date</label><input type="date" id="debtDueDate" name="debtDueDate" required></div><button type="submit" class="btn btn-primary w-full">Add Debt</button>`,
+    handleAddDebtSubmit
+  );
+  const nextMonth = new Date();
+  nextMonth.setMonth(nextMonth.getMonth() + 1);
+  const debtDueDateInput = $("#debtDueDate");
+  if (debtDueDateInput)
+    debtDueDateInput.value = nextMonth.toISOString().split("T")[0];
+}
+
+function handleAddDebtSubmit(event) {
+  event.preventDefault();
+  const form = new FormData(event.target);
+  const amount = parseFloat(form.get("debtAmount"));
+  if (isNaN(amount) || amount <= 0) {
+    showNotification("Invalid amount.", "error");
+    return;
+  }
+  const newDebt = {
+    id: generateId(),
+    who: form.get("debtWho").trim(),
+    why: form.get("debtWhy").trim(),
+    amount: amount,
+    originalAmount: amount,
+    remainingAmount: amount,
+    dueDate: form.get("debtDueDate"),
+    timestamp: Date.now(),
+  };
+  if (!newDebt.who || !newDebt.why || !newDebt.dueDate) {
+    showNotification("All fields required.", "error");
+    return;
+  }
+  state.debts.push(newDebt);
+  saveData();
+  renderDashboard();
+  closeModal("formModal");
+  showNotification("Debt added.", "success");
+}
+
+function openEditDebtForm(id) {
+  const d = state.debts.find((item) => item.id === id);
+  if (!d) return;
+  openFormModal(
+    "Edit Debt",
+    ` <input type="hidden" name="editDebtId" value="${
+      d.id
+    }"> <div><label class="block text-sm font-medium mb-1">Who</label><input type="text" name="debtWho" value="${
+      d.who
+    }" required></div> <div><label class="block text-sm font-medium mb-1">Why</label><input type="text" name="debtWhy" value="${
+      d.why
+    }" required></div> <div><label class="block text-sm font-medium mb-1">Original Amount</label><input type="number" name="debtOriginalAmount" value="${(
+      d.originalAmount || d.amount
+    ).toFixed(
+      2
+    )}" step="0.01" min="0.01" required></div> <div><label class="block text-sm font-medium mb-1">Remaining Amount</label><input type="number" name="debtRemainingAmount" value="${d.remainingAmount.toFixed(
+      2
+    )}" step="0.01" min="0" required></div> <div><label class="block text-sm font-medium mb-1">Due Date</label><input type="date" name="debtDueDate" value="${
+      d.dueDate
+    }" required></div> <button type="submit" class="btn btn-primary w-full">Update Debt</button> `,
+    handleEditDebtSubmit
+  );
+}
+
+function handleEditDebtSubmit(event) {
+  event.preventDefault();
+  const form = new FormData(event.target);
+  const id = form.get("editDebtId");
+  const debt = state.debts.find((d) => d.id === id);
+  if (!debt) return;
+  debt.who = form.get("debtWho").trim();
+  debt.why = form.get("debtWhy").trim();
+  debt.originalAmount = parseFloat(form.get("debtOriginalAmount"));
+  debt.remainingAmount = parseFloat(form.get("debtRemainingAmount"));
+  debt.dueDate = form.get("debtDueDate");
+  debt.timestamp = Date.now();
+  if (
+    isNaN(debt.originalAmount) ||
+    debt.originalAmount <= 0 ||
+    isNaN(debt.remainingAmount) ||
+    debt.remainingAmount < 0 ||
+    debt.remainingAmount > debt.originalAmount
+  ) {
+    showNotification(
+      "Invalid amounts for debt. Remaining cannot exceed original.",
+      "error"
+    );
+    return;
+  }
+  debt.amount = debt.originalAmount;
+  saveData();
+  renderDashboard();
+  closeModal("formModal");
+  showNotification("Debt updated.", "success");
+}
+
+// MODIFIED: openPayDebtForm to include category selection
+function openPayDebtForm(debtId) {
+  const debt = state.debts.find((d) => d.id === debtId);
+  if (!debt) return;
+
+  const debtRepaymentCategoryName = "Debt Repayment";
+  let categoryOptions = "";
+  const otherCategories = state.categories
+    .filter(
+      (c) =>
+        c.toLowerCase() !== "income" &&
+        c.toLowerCase() !== "credit card payment" &&
+        c.toLowerCase() !== debtRepaymentCategoryName.toLowerCase()
+    )
+    .sort((a, b) => a.localeCompare(b));
+
+  if (
+    state.categories.some(
+      (c) => c.toLowerCase() === debtRepaymentCategoryName.toLowerCase()
+    )
+  ) {
+    categoryOptions += `<option value="${debtRepaymentCategoryName}" selected>${debtRepaymentCategoryName}</option>`;
+  } else {
+    categoryOptions += `<option value="${debtRepaymentCategoryName}" selected>${debtRepaymentCategoryName} (Suggested)</option>`;
+  }
+  otherCategories.forEach((cat) => {
+    categoryOptions += `<option value="${cat}">${cat}</option>`;
+  });
+
+  const formHtml = `
+      <p class="mb-2">Owed: <span class="font-semibold">${formatCurrency(
+        debt.remainingAmount
+      )}</span> to ${debt.who} for ${debt.why}</p>
       <div>
           <label for="payDebtAmount" class="block text-sm font-medium mb-1">Payment Amount (LKR)</label>
-          <input type="number" id="payDebtAmount" name="payDebtAmount" step="0.01" min="0.01" max="${t.remainingAmount.toFixed(2)}" value="${t.remainingAmount.toFixed(2)}" required>
+          <input type="number" id="payDebtAmount" name="payDebtAmount" step="0.01" min="0.01" max="${debt.remainingAmount.toFixed(
+            2
+          )}" value="${debt.remainingAmount.toFixed(2)}" required>
       </div>
       <div>
           <label for="modalPayDebtAccount" class="block text-sm font-medium mb-1">Pay From Account</label>
@@ -169,11 +2711,135 @@ const $=e=>document.querySelector(e),$$=e=>document.querySelectorAll(e),formatCu
       </div>
       <div id="debtPaymentCategoryGroup">
           <label for="modalPayDebtCategory" class="block text-sm font-medium mb-1">Category for this Payment</label>
-          <select id="modalPayDebtCategory" name="payDebtCategory" required>${n}</select>
+          <select id="modalPayDebtCategory" name="payDebtCategory" required>${categoryOptions}</select>
       </div>
-      <input type="hidden" name="debtId" value="${e}">
+      <input type="hidden" name="debtId" value="${debtId}">
       <button type="submit" class="btn btn-primary w-full mt-3">Make Payment</button>
-  `;openFormModal(`Pay Debt: ${t.who}`,i,handlePayDebtSubmit),populateDropdowns();let r=document.getElementById("logDebtPaymentAsExpense"),s=document.getElementById("debtPaymentCategoryGroup"),l=document.getElementById("modalPayDebtCategory");r&&s&&l&&(s.style.display=r.checked?"block":"none",l.required=r.checked,r.onchange=()=>{r.checked?(s.style.display="block",l.required=!0):(s.style.display="none",l.required=!1)})}function handlePayDebtSubmit(e){e.preventDefault();let t=new FormData(e.target),a=t.get("debtId"),n=parseFloat(t.get("payDebtAmount")),o=t.get("payDebtAccount"),i="on"===t.get("logDebtPaymentAsExpense"),r=i?t.get("payDebtCategory"):null,s=new Date().toISOString().split("T")[0],l=state.debts.find(e=>e.id===a),c=state.accounts.find(e=>e.id===o);if(!l||!c){showNotification("Debt or account not found.","error");return}if(isNaN(n)||n<=0||n>l.remainingAmount+.005){showNotification("Invalid payment amount.","error");return}if(i&&!r){showNotification("Please select a category for this payment if logging as an expense.","error");return}if(c.balance<n){showNotification(`Insufficient funds in ${c.name}.`,"warning");return}c.balance-=n,isNaN(c.balance)&&(c.balance=0),l.remainingAmount-=n;let d=`Payment of ${formatCurrency(n)} made for ${l.who}. Remaining: ${formatCurrency(l.remainingAmount)}.`;if(i){let u={id:generateId(),type:"expense",amount:n,account:o,category:r,description:`Debt Pmt: ${l.who} - ${l.why.substring(0,20)}${l.why.length>20?"...":""}`,date:s,timestamp:Date.now()};state.transactions.push(u),d+=" Expense logged.",refreshMonthlyViewIfRelevant(s)}else d+=" Not logged as expense.";l.remainingAmount<=.005&&(state.debts=state.debts.filter(e=>e.id!==a),d=`Debt for ${l.who} fully paid.${i?" Expense logged.":" Not logged as expense."}`),saveData(),renderDashboard(),populateDropdowns(),closeModal("formModal"),showNotification(d,"success")}function deleteDebt(e){let t=state.debts.find(t=>t.id===e);t&&confirm(`Delete debt for "${t.who}" (${formatCurrency(t.remainingAmount)})? This removes the record only.`)&&(state.debts=state.debts.filter(t=>t.id!==e),saveData(),renderDashboard(),showNotification("Debt entry deleted.","success"))}function openAddReceivableForm(){let e=`
+  `;
+  openFormModal(`Pay Debt: ${debt.who}`, formHtml, handlePayDebtSubmit);
+  populateDropdowns();
+
+  const logExpenseCheckbox = document.getElementById("logDebtPaymentAsExpense");
+  const categoryGroupDiv = document.getElementById("debtPaymentCategoryGroup");
+  const categorySelect = document.getElementById("modalPayDebtCategory");
+
+  if (logExpenseCheckbox && categoryGroupDiv && categorySelect) {
+    categoryGroupDiv.style.display = logExpenseCheckbox.checked
+      ? "block"
+      : "none";
+    categorySelect.required = logExpenseCheckbox.checked;
+
+    logExpenseCheckbox.onchange = () => {
+      if (logExpenseCheckbox.checked) {
+        categoryGroupDiv.style.display = "block";
+        categorySelect.required = true;
+      } else {
+        categoryGroupDiv.style.display = "none";
+        categorySelect.required = false;
+      }
+    };
+  }
+}
+
+// MODIFIED: handlePayDebtSubmit to log an expense
+function handlePayDebtSubmit(event) {
+  event.preventDefault();
+  const form = new FormData(event.target);
+  const debtId = form.get("debtId");
+  const paymentAmount = parseFloat(form.get("payDebtAmount"));
+  const accountId = form.get("payDebtAccount");
+  const logAsExpense = form.get("logDebtPaymentAsExpense") === "on";
+  const category = logAsExpense ? form.get("payDebtCategory") : null;
+  const currentDate = new Date().toISOString().split("T")[0];
+
+  const debt = state.debts.find((d) => d.id === debtId);
+  const account = state.accounts.find((acc) => acc.id === accountId);
+
+  if (!debt || !account) {
+    showNotification("Debt or account not found.", "error");
+    return;
+  }
+  if (
+    isNaN(paymentAmount) ||
+    paymentAmount <= 0 ||
+    paymentAmount > debt.remainingAmount + 0.005
+  ) {
+    showNotification("Invalid payment amount.", "error");
+    return;
+  }
+  if (logAsExpense && !category) {
+    showNotification(
+      "Please select a category for this payment if logging as an expense.",
+      "error"
+    );
+    return;
+  }
+  if (account.balance < paymentAmount) {
+    showNotification(`Insufficient funds in ${account.name}.`, "warning");
+    return;
+  }
+
+  account.balance -= paymentAmount;
+  if (isNaN(account.balance)) account.balance = 0;
+  debt.remainingAmount -= paymentAmount;
+
+  let message = `Payment of ${formatCurrency(paymentAmount)} made for ${
+    debt.who
+  }. Remaining: ${formatCurrency(debt.remainingAmount)}.`;
+
+  if (logAsExpense) {
+    const expenseTransaction = {
+      id: generateId(),
+      type: "expense",
+      amount: paymentAmount,
+      account: accountId,
+      category: category,
+      description: `Debt Pmt: ${debt.who} - ${debt.why.substring(0, 20)}${
+        debt.why.length > 20 ? "..." : ""
+      }`,
+      date: currentDate,
+      timestamp: Date.now(),
+    };
+    state.transactions.push(expenseTransaction);
+    message += " Expense logged.";
+    refreshMonthlyViewIfRelevant(currentDate);
+  } else {
+    message += " Not logged as expense.";
+  }
+
+  if (debt.remainingAmount <= 0.005) {
+    state.debts = state.debts.filter((d) => d.id !== debtId);
+    message = `Debt for ${debt.who} fully paid.${
+      logAsExpense ? " Expense logged." : " Not logged as expense."
+    }`;
+  }
+
+  saveData();
+  renderDashboard();
+  populateDropdowns();
+  closeModal("formModal");
+  showNotification(message, "success");
+}
+
+function deleteDebt(debtId) {
+  const debt = state.debts.find((d) => d.id === debtId);
+  if (!debt) return;
+  if (
+    confirm(
+      `Delete debt for "${debt.who}" (${formatCurrency(
+        debt.remainingAmount
+      )})? This removes the record only.`
+    )
+  ) {
+    state.debts = state.debts.filter((d) => d.id !== debtId);
+    saveData();
+    renderDashboard();
+    showNotification("Debt entry deleted.", "success");
+  }
+}
+
+function openAddReceivableForm() {
+  const formHtml = `
             <div><label for="recWho" class="block text-sm font-medium mb-1">Who owes you?</label><input type="text" id="recWho" name="recWho" placeholder="e.g., Jane Doe" required></div>
             <div><label for="recWhy" class="block text-sm font-medium mb-1">Reason?</label><input type="text" id="recWhy" name="recWhy" placeholder="e.g., Friendly loan" required></div>
             <div><label for="recAmount" class="block text-sm font-medium mb-1">Amount Owed (LKR)</label><input type="number" id="recAmount" name="recAmount" step="0.01" min="0.01" required></div>
@@ -192,11 +2858,350 @@ const $=e=>document.querySelector(e),$$=e=>document.querySelectorAll(e),formatCu
                 <strong>Important:</strong> Selecting "Credit Card Loan" means you provided funds from your credit card. This entry tracks the money owed <em>to you</em>. It does not automatically create an expense on your credit card. If you used your credit card for this, please add a separate "CC Expense" manually to reflect the charge on your card.
             </p>
             <button type="submit" class="btn btn-primary w-full"><i class="fas fa-plus"></i> Add Receivable</button>
-        `;openFormModal("Add New Receivable",e,handleAddReceivableSubmit);let t=$("#recDateGiven");t&&(t.value=new Date().toISOString().split("T")[0]);let a=$("#recSourceAccountAdd");a&&(a.innerHTML="",state.accounts.forEach(e=>{let t=document.createElement("option");t.value=e.id,t.textContent=`${e.name} (${formatCurrency(e.balance)})`,a.appendChild(t)}));let n=$("#recType");n&&toggleReceivableSourceAccount(n.value,"recSourceAccountGroupAdd","recSourceAccountAdd")}function toggleReceivableSourceAccount(e,t,a){let n=document.getElementById(t),o=document.getElementById(a),i=document.getElementById("receivableCcDisclaimer");n&&o?"cash"===e?(n.style.display="block",o.required=!0,i&&(i.style.display="none")):(n.style.display="none",o.required=!1,i&&(i.style.display="block")):(n||console.warn(`toggleReceivableSourceAccount: Group element with ID '${t}' not found.`),o||console.warn(`toggleReceivableSourceAccount: Select element with ID '${a}' not found.`)),i||"cc"!==e||console.warn("toggleReceivableSourceAccount: Disclaimer element with ID 'receivableCcDisclaimer' not found, but was expected for 'cc' type.")}function handleAddReceivableSubmit(e){e.preventDefault();let t=new FormData(e.target),a=parseFloat(t.get("recAmount")),n=t.get("recType"),o="cash"===n?t.get("receivableSourceAccount"):null;if(isNaN(a)||a<=0){showNotification("Invalid amount.","error");return}let i={id:generateId(),who:t.get("recWho").trim(),why:t.get("recWhy").trim(),amount:a,originalAmount:a,remainingAmount:a,dateGiven:t.get("recDateGiven"),type:n,sourceAccount:o,ccTransactionId:null,timestamp:Date.now()};if(!i.who||!i.why||!i.dateGiven){showNotification("All fields required.","error");return}if("cash"===n){if(!o){showNotification("Source account required for cash loan.","error");return}let r=state.accounts.find(e=>e.id===o);if(!r){showNotification("Source account not found.","error");return}if(r.balance<a){showNotification(`Insufficient funds in ${r.name}.`,"warning");return}r.balance-=a,isNaN(r.balance)&&(r.balance=0)}else"cc"===n&&console.log(`Receivable of type 'cc' added for ${i.who}. User to manually add CC expense if needed.`);state.receivables.push(i),saveData(),renderDashboard(),populateDropdowns(),"cc"===n&&renderCreditCardSection(),closeModal("formModal"),showNotification(`Receivable for ${i.who} added.${"cash"===n&&o?` ${formatCurrency(a)} deducted from account.`:""}`,"success")}function openEditReceivableForm(e){let t=state.receivables.find(t=>t.id===e);if(!t)return;openFormModal("Edit Receivable",` <input type="hidden" name="editReceivableId" value="${t.id}"> <div><label class="block text-sm font-medium mb-1">Who</label><input type="text" name="recWho" value="${t.who}" required></div> <div><label class="block text-sm font-medium mb-1">Why</label><input type="text" name="recWhy" value="${t.why}" required></div> <div><label class="block text-sm font-medium mb-1">Original Amount</label><input type="number" name="recOriginalAmount" value="${(t.originalAmount||t.amount).toFixed(2)}" step="0.01" min="0.01" required></div> <div><label class="block text-sm font-medium mb-1">Remaining</label><input type="number" name="recRemainingAmount" value="${t.remainingAmount.toFixed(2)}" step="0.01" min="0" required></div> <div><label class="block text-sm font-medium mb-1">Date Given</label><input type="date" name="recDateGiven" value="${t.dateGiven}" required></div> <div><label class="block text-sm font-medium mb-1">Type</label><select id="recTypeEdit" name="recType" onchange="toggleReceivableSourceAccount(this.value, 'recSourceAccountGroupEdit', 'recSourceAccountEdit')"><option value="cash" ${"cash"===t.type?"selected":""}>Cash/Bank</option><option value="cc" ${"cc"===t.type?"selected":""}>Credit Card</option></select></div> <div id="recSourceAccountGroupEdit" style="display:${"cash"===t.type?"block":"none"}"><label class="block text-sm font-medium mb-1">Source Account</label><select id="recSourceAccountEdit" name="receivableSourceAccount">${state.accounts.map(e=>`<option value="${e.id}" ${t.sourceAccount===e.id?"selected":""}>${e.name} (${formatCurrency(e.balance)})</option>`).join("")}</select></div> <button type="submit" class="btn btn-primary w-full">Update Receivable</button> `,handleEditReceivableSubmit);let a=$("#recTypeEdit");a&&toggleReceivableSourceAccount(a.value,"recSourceAccountGroupEdit","recSourceAccountEdit")}function handleEditReceivableSubmit(e){e.preventDefault();let t=new FormData(e.target),a=t.get("editReceivableId"),n=state.receivables.find(e=>e.id===a);if(!n)return;let o=n.sourceAccount,i=n.originalAmount,r=n.type,s=n.ccTransactionId;n.who=t.get("recWho").trim(),n.why=t.get("recWhy").trim();let l=parseFloat(t.get("recOriginalAmount"));if(n.remainingAmount=parseFloat(t.get("recRemainingAmount")),n.dateGiven=t.get("recDateGiven"),n.type=t.get("recType"),n.sourceAccount="cash"===n.type?t.get("receivableSourceAccount"):null,n.timestamp=Date.now(),isNaN(l)||l<=0||isNaN(n.remainingAmount)||n.remainingAmount<0||n.remainingAmount>l){showNotification("Invalid amounts.","error");return}if("cash"===n.type&&!n.sourceAccount){showNotification("Source account required for cash loan.","error");return}let c=state.accounts.find(e=>e.id===o);if("cash"===r&&c&&(c.balance+=i),"cc"===r&&s&&(state.creditCard.transactions=state.creditCard.transactions.filter(e=>e.id!==s)),n.originalAmount=l,n.amount=l,n.ccTransactionId=null,"cash"===n.type&&n.sourceAccount){let d=state.accounts.find(e=>e.id===n.sourceAccount);if(d){if(d.balance<n.amount){showNotification(`Insufficient funds in new source ${d.name}. Reverting.`,"warning"),"cash"===r&&c&&(c.balance-=i),"cc"===r&&s&&console.warn("Could not re-add old CC tx during revert."),n.originalAmount=i,n.amount=i;return}d.balance-=n.amount}}else if("cc"===n.type){let u={id:generateId(),amount:n.amount,description:`Loan to ${n.who}: ${n.why}`,date:n.dateGiven,paidAmount:0,paidOff:!1,timestamp:Date.now()};state.creditCard.transactions.push(u),n.ccTransactionId=u.id}saveData(),renderDashboard(),populateDropdowns(),("cc"===n.type||"cc"===r)&&renderCreditCardSection(),closeModal("formModal"),showNotification("Receivable updated.","success")}function openReceivePaymentForm(e){let t=state.receivables.find(t=>t.id===e);t&&(openFormModal(`Receive Payment: ${t.who}`,`<p class="mb-2">Owed: <span class="font-semibold">${formatCurrency(t.remainingAmount)}</span> for ${t.why}</p><div><label class="block text-sm font-medium mb-1">Amount Received</label><input type="number" name="recPaymentAmount" step="0.01" min="0.01" max="${t.remainingAmount.toFixed(2)}" value="${t.remainingAmount.toFixed(2)}" required></div><div><label class="block text-sm font-medium mb-1">Receive Into Account</label><select name="recPaymentAccount" required></select></div><input type="hidden" name="recId" value="${e}"><button type="submit" class="btn btn-primary w-full">Record Payment</button>`,handleReceivePaymentSubmit),populateDropdowns())}function handleReceivePaymentSubmit(e){e.preventDefault();let t=new FormData(e.target),a=t.get("recId"),n=parseFloat(t.get("recPaymentAmount")),o=t.get("recPaymentAccount"),i=state.receivables.find(e=>e.id===a),r=state.accounts.find(e=>e.id===o);if(!i||!r){showNotification("Receivable/account not found.","error");return}if(isNaN(n)||n<=0||n>i.remainingAmount+.005){showNotification("Invalid payment amount.","error");return}r.balance+=n,i.remainingAmount-=n,isNaN(r.balance)&&(r.balance=0);let s=`Payment of ${formatCurrency(n)} received from ${i.who}. Remaining: ${formatCurrency(i.remainingAmount)}`;i.remainingAmount<=.005&&(state.receivables=state.receivables.filter(e=>e.id!==a),s=`Receivable from ${i.who} fully paid.`),saveData(),renderDashboard(),populateDropdowns(),closeModal("formModal"),showNotification(s,"success")}function deleteReceivable(e){let t=state.receivables.find(t=>t.id===e);if(!t)return;let a=`Delete receivable for "${t.who}" (${formatCurrency(t.remainingAmount)})? This removes the record.`;"cash"===t.type&&t.sourceAccount?a+=`
+        `;
+  openFormModal("Add New Receivable", formHtml, handleAddReceivableSubmit);
 
-Warning: Does NOT refund amount deducted from source account.`:"cc"===t.type&&t.ccTransactionId&&(a+=`
+  const dateGivenInput = $("#recDateGiven");
+  if (dateGivenInput)
+    dateGivenInput.value = new Date().toISOString().split("T")[0];
 
-Warning: This will also remove the associated CC transaction record.`),confirm(a)&&("cc"===t.type&&t.ccTransactionId&&(state.creditCard.transactions=state.creditCard.transactions.filter(e=>e.id!==t.ccTransactionId)),state.receivables=state.receivables.filter(t=>t.id!==e),saveData(),renderDashboard(),"cc"===t.type&&renderCreditCardSection(),showNotification("Receivable entry deleted.","success"))}function openAddInstallmentForm(){let e=`
+  const sourceAccountSelect = $("#recSourceAccountAdd");
+  if (sourceAccountSelect) {
+    sourceAccountSelect.innerHTML = "";
+    state.accounts.forEach((a) => {
+      const o = document.createElement("option");
+      o.value = a.id;
+      o.textContent = `${a.name} (${formatCurrency(a.balance)})`;
+      sourceAccountSelect.appendChild(o);
+    });
+  }
+  const recTypeSelect = $("#recType");
+  if (recTypeSelect) {
+    toggleReceivableSourceAccount(
+      recTypeSelect.value,
+      "recSourceAccountGroupAdd",
+      "recSourceAccountAdd"
+    );
+  }
+}
+
+function toggleReceivableSourceAccount(type, groupId, selectId) {
+  const group = document.getElementById(groupId); // Use getElementById for reliability
+  const select = document.getElementById(selectId);
+  const disclaimerElement = document.getElementById('receivableCcDisclaimer'); // Get the disclaimer element
+
+  if (group && select) { // Ensure primary elements exist
+    if (type === "cash") {
+      group.style.display = "block";
+      select.required = true;
+      if (disclaimerElement) {
+        disclaimerElement.style.display = "none"; // Hide disclaimer for cash/bank loans
+      }
+    } else { // This is the "cc" (Credit Card Loan) case
+      group.style.display = "none";
+      select.required = false;
+      if (disclaimerElement) {
+        disclaimerElement.style.display = "block"; // Show disclaimer for CC loans
+      }
+    }
+  } else {
+    if (!group) console.warn(`toggleReceivableSourceAccount: Group element with ID '${groupId}' not found.`);
+    if (!select) console.warn(`toggleReceivableSourceAccount: Select element with ID '${selectId}' not found.`);
+  }
+  // It's good practice to also check if disclaimerElement exists, though it should if step B.1 was done.
+  if (!disclaimerElement && type === "cc") {
+      console.warn("toggleReceivableSourceAccount: Disclaimer element with ID 'receivableCcDisclaimer' not found, but was expected for 'cc' type.");
+  }
+}
+
+// MODIFIED: handleAddReceivableSubmit to use correct form field name for source account
+function handleAddReceivableSubmit(event) {
+  event.preventDefault();
+  const form = new FormData(event.target);
+  const amount = parseFloat(form.get("recAmount"));
+  const type = form.get("recType");
+  // CORRECTED: Use 'receivableSourceAccount' to match the form's select name
+  const sourceAccountId =
+    type === "cash" ? form.get("receivableSourceAccount") : null;
+
+  if (isNaN(amount) || amount <= 0) {
+    showNotification("Invalid amount.", "error");
+    return;
+  }
+  const newRec = {
+    id: generateId(),
+    who: form.get("recWho").trim(),
+    why: form.get("recWhy").trim(),
+    amount: amount,
+    originalAmount: amount,
+    remainingAmount: amount,
+    dateGiven: form.get("recDateGiven"),
+    type: type,
+    sourceAccount: sourceAccountId,
+    ccTransactionId: null,
+    timestamp: Date.now(),
+  };
+  if (!newRec.who || !newRec.why || !newRec.dateGiven) {
+    showNotification("All fields required.", "error");
+    return;
+  }
+
+  if (type === "cash") {
+    if (!sourceAccountId) {
+      showNotification("Source account required for cash loan.", "error");
+      return;
+    }
+    let srcAcc = state.accounts.find((acc) => acc.id === sourceAccountId);
+    if (!srcAcc) {
+      showNotification("Source account not found.", "error");
+      return;
+    }
+    if (srcAcc.balance < amount) {
+      showNotification(`Insufficient funds in ${srcAcc.name}.`, "warning");
+      return;
+    }
+    srcAcc.balance -= amount; // Amount deduction
+    if (isNaN(srcAcc.balance)) srcAcc.balance = 0;
+  } else if (type === "cc") {
+    // We no longer automatically create a CC transaction here.
+    // The ccTransactionId will remain null for 'cc' type receivables
+    // unless a CC transaction is manually linked later (which is not current functionality).
+    // A disclaimer in the form will guide the user.
+    console.log(`Receivable of type 'cc' added for ${newRec.who}. User to manually add CC expense if needed.`);
+}
+
+  state.receivables.push(newRec);
+  saveData();
+  renderDashboard();
+  populateDropdowns();
+  if (type === "cc") renderCreditCardSection();
+  closeModal("formModal");
+  showNotification(
+    `Receivable for ${newRec.who} added.${
+      type === "cash" && sourceAccountId
+        ? ` ${formatCurrency(amount)} deducted from account.`
+        : ""
+    }`,
+    "success"
+  );
+}
+
+function openEditReceivableForm(id) {
+  const r = state.receivables.find((item) => item.id === id);
+  if (!r) return;
+  openFormModal(
+    "Edit Receivable",
+    ` <input type="hidden" name="editReceivableId" value="${
+      r.id
+    }"> <div><label class="block text-sm font-medium mb-1">Who</label><input type="text" name="recWho" value="${
+      r.who
+    }" required></div> <div><label class="block text-sm font-medium mb-1">Why</label><input type="text" name="recWhy" value="${
+      r.why
+    }" required></div> <div><label class="block text-sm font-medium mb-1">Original Amount</label><input type="number" name="recOriginalAmount" value="${(
+      r.originalAmount || r.amount
+    ).toFixed(
+      2
+    )}" step="0.01" min="0.01" required></div> <div><label class="block text-sm font-medium mb-1">Remaining</label><input type="number" name="recRemainingAmount" value="${r.remainingAmount.toFixed(
+      2
+    )}" step="0.01" min="0" required></div> <div><label class="block text-sm font-medium mb-1">Date Given</label><input type="date" name="recDateGiven" value="${
+      r.dateGiven
+    }" required></div> <div><label class="block text-sm font-medium mb-1">Type</label><select id="recTypeEdit" name="recType" onchange="toggleReceivableSourceAccount(this.value, 'recSourceAccountGroupEdit', 'recSourceAccountEdit')"><option value="cash" ${
+      r.type === "cash" ? "selected" : ""
+    }>Cash/Bank</option><option value="cc" ${
+      r.type === "cc" ? "selected" : ""
+    }>Credit Card</option></select></div> <div id="recSourceAccountGroupEdit" style="display:${
+      r.type === "cash" ? "block" : "none"
+    }"><label class="block text-sm font-medium mb-1">Source Account</label><select id="recSourceAccountEdit" name="receivableSourceAccount">${state.accounts
+      .map(
+        (acc) =>
+          `<option value="${acc.id}" ${
+            r.sourceAccount === acc.id ? "selected" : ""
+          }>${acc.name} (${formatCurrency(acc.balance)})</option>`
+      )
+      .join(
+        ""
+      )}</select></div> <button type="submit" class="btn btn-primary w-full">Update Receivable</button> `,
+    handleEditReceivableSubmit
+  );
+  const recTypeEditSelect = $("#recTypeEdit");
+  if (recTypeEditSelect)
+    toggleReceivableSourceAccount(
+      recTypeEditSelect.value,
+      "recSourceAccountGroupEdit",
+      "recSourceAccountEdit"
+    );
+}
+
+function handleEditReceivableSubmit(event) {
+  event.preventDefault();
+  const form = new FormData(event.target);
+  const id = form.get("editReceivableId");
+  const rec = state.receivables.find((r) => r.id === id);
+  if (!rec) return;
+  const oldSourceAccountId = rec.sourceAccount,
+    oldOriginalAmount = rec.originalAmount,
+    oldType = rec.type,
+    oldCcTxId = rec.ccTransactionId;
+  rec.who = form.get("recWho").trim();
+  rec.why = form.get("recWhy").trim();
+  const newOriginalAmount = parseFloat(form.get("recOriginalAmount"));
+  rec.remainingAmount = parseFloat(form.get("recRemainingAmount"));
+  rec.dateGiven = form.get("recDateGiven");
+  rec.type = form.get("recType");
+  rec.sourceAccount =
+    rec.type === "cash" ? form.get("receivableSourceAccount") : null;
+  rec.timestamp = Date.now();
+  if (
+    isNaN(newOriginalAmount) ||
+    newOriginalAmount <= 0 ||
+    isNaN(rec.remainingAmount) ||
+    rec.remainingAmount < 0 ||
+    rec.remainingAmount > newOriginalAmount
+  ) {
+    showNotification("Invalid amounts.", "error");
+    return;
+  }
+  if (rec.type === "cash" && !rec.sourceAccount) {
+    showNotification("Source account required for cash loan.", "error");
+    return;
+  }
+  const oldSourceAccount = state.accounts.find(
+    (acc) => acc.id === oldSourceAccountId
+  );
+  if (oldType === "cash" && oldSourceAccount)
+    oldSourceAccount.balance += oldOriginalAmount;
+  if (oldType === "cc" && oldCcTxId)
+    state.creditCard.transactions = state.creditCard.transactions.filter(
+      (tx) => tx.id !== oldCcTxId
+    );
+  rec.originalAmount = newOriginalAmount;
+  rec.amount = newOriginalAmount;
+  rec.ccTransactionId = null;
+  if (rec.type === "cash" && rec.sourceAccount) {
+    const newSourceAccount = state.accounts.find(
+      (acc) => acc.id === rec.sourceAccount
+    );
+    if (newSourceAccount) {
+      if (newSourceAccount.balance < rec.amount) {
+        showNotification(
+          `Insufficient funds in new source ${newSourceAccount.name}. Reverting.`,
+          "warning"
+        );
+        if (oldType === "cash" && oldSourceAccount)
+          oldSourceAccount.balance -= oldOriginalAmount;
+        if (oldType === "cc" && oldCcTxId) {
+          console.warn("Could not re-add old CC tx during revert.");
+        }
+        rec.originalAmount = oldOriginalAmount;
+        rec.amount = oldOriginalAmount;
+        return;
+      }
+      newSourceAccount.balance -= rec.amount;
+    }
+  } else if (rec.type === "cc") {
+    const ccTx = {
+      id: generateId(),
+      amount: rec.amount,
+      description: `Loan to ${rec.who}: ${rec.why}`,
+      date: rec.dateGiven,
+      paidAmount: 0,
+      paidOff: false,
+      timestamp: Date.now(),
+    };
+    state.creditCard.transactions.push(ccTx);
+    rec.ccTransactionId = ccTx.id;
+  }
+  saveData();
+  renderDashboard();
+  populateDropdowns();
+  if (rec.type === "cc" || oldType === "cc") renderCreditCardSection();
+  closeModal("formModal");
+  showNotification("Receivable updated.", "success");
+}
+
+function openReceivePaymentForm(recId) {
+  const receivable = state.receivables.find((r) => r.id === recId);
+  if (!receivable) return;
+  openFormModal(
+    `Receive Payment: ${receivable.who}`,
+    `<p class="mb-2">Owed: <span class="font-semibold">${formatCurrency(
+      receivable.remainingAmount
+    )}</span> for ${
+      receivable.why
+    }</p><div><label class="block text-sm font-medium mb-1">Amount Received</label><input type="number" name="recPaymentAmount" step="0.01" min="0.01" max="${receivable.remainingAmount.toFixed(
+      2
+    )}" value="${receivable.remainingAmount.toFixed(
+      2
+    )}" required></div><div><label class="block text-sm font-medium mb-1">Receive Into Account</label><select name="recPaymentAccount" required></select></div><input type="hidden" name="recId" value="${recId}"><button type="submit" class="btn btn-primary w-full">Record Payment</button>`,
+    handleReceivePaymentSubmit
+  );
+  populateDropdowns();
+}
+
+function handleReceivePaymentSubmit(event) {
+  event.preventDefault();
+  const form = new FormData(event.target);
+  const recId = form.get("recId"),
+    paymentAmount = parseFloat(form.get("recPaymentAmount")),
+    accountId = form.get("recPaymentAccount");
+  const receivable = state.receivables.find((r) => r.id === recId),
+    account = state.accounts.find((acc) => acc.id === accountId);
+  if (!receivable || !account) {
+    showNotification("Receivable/account not found.", "error");
+    return;
+  }
+  if (
+    isNaN(paymentAmount) ||
+    paymentAmount <= 0 ||
+    paymentAmount > receivable.remainingAmount + 0.005
+  ) {
+    showNotification("Invalid payment amount.", "error");
+    return;
+  }
+  account.balance += paymentAmount;
+  receivable.remainingAmount -= paymentAmount;
+  if (isNaN(account.balance)) account.balance = 0;
+  let message = `Payment of ${formatCurrency(paymentAmount)} received from ${
+    receivable.who
+  }. Remaining: ${formatCurrency(receivable.remainingAmount)}`;
+  if (receivable.remainingAmount <= 0.005) {
+    state.receivables = state.receivables.filter((r) => r.id !== recId);
+    message = `Receivable from ${receivable.who} fully paid.`;
+  }
+  saveData();
+  renderDashboard();
+  populateDropdowns();
+  closeModal("formModal");
+  showNotification(message, "success");
+}
+
+function deleteReceivable(recId) {
+  const receivable = state.receivables.find((r) => r.id === recId);
+  if (!receivable) return;
+  let confirmMessage = `Delete receivable for "${
+    receivable.who
+  }" (${formatCurrency(receivable.remainingAmount)})? This removes the record.`;
+  if (receivable.type === "cash" && receivable.sourceAccount) {
+    confirmMessage += `\n\nWarning: Does NOT refund amount deducted from source account.`;
+  } else if (receivable.type === "cc" && receivable.ccTransactionId) {
+    confirmMessage += `\n\nWarning: This will also remove the associated CC transaction record.`;
+  }
+  if (confirm(confirmMessage)) {
+    if (receivable.type === "cc" && receivable.ccTransactionId)
+      state.creditCard.transactions = state.creditCard.transactions.filter(
+        (tx) => tx.id !== receivable.ccTransactionId
+      );
+    state.receivables = state.receivables.filter((r) => r.id !== recId);
+    saveData();
+    renderDashboard();
+    if (receivable.type === "cc") renderCreditCardSection();
+    showNotification("Receivable entry deleted.", "success");
+  }
+}
+
+function openAddInstallmentForm() {
+  // Added instMonthsLeft input field
+  const formHtml = `
             <div>
                 <label for="instDescription" class="block text-sm font-medium mb-1">Description</label>
                 <input type="text" id="instDescription" name="instDescription" placeholder="e.g., New Phone" required>
@@ -222,14 +3227,306 @@ Warning: This will also remove the associated CC transaction record.`),confirm(a
                 <strong>Important:</strong> This entry tracks your installment plan. It does not automatically create Credit Card expense entries for each payment. If this plan is for a credit card purchase, please remember to add corresponding "CC Expense" entries manually as payments are made or appear on your statement to accurately reflect your CC balance.
             </p>
             <button type="submit" class="btn btn-primary w-full">Add Plan</button>
-        `;openFormModal("Add New Installment Plan",e,handleAddInstallmentSubmit);let t=$("#instStartDate");t&&(t.value=new Date().toISOString().split("T")[0]);let a=$("#instTotalMonths"),n=$("#instMonthsLeft");if(a&&n){let o=()=>{let e=parseInt(a.value);!isNaN(e)&&e>0?(n.max=e,parseInt(n.value)>e&&(n.value=e)):n.removeAttribute("max")};a.addEventListener("input",o),o()}}function handleAddInstallmentSubmit(e){e.preventDefault();let t=new FormData(e.target),a=parseFloat(t.get("instFullAmount")),n=parseInt(t.get("instTotalMonths")),o=parseInt(t.get("instMonthsLeft"));if(isNaN(a)||a<=0||isNaN(n)||n<=0){showNotification("Invalid full amount or total months.","error");return}(isNaN(o)||o>n||o<0)&&(o=n);let i={id:generateId(),description:t.get("instDescription").trim(),monthlyAmount:a/n,totalMonths:n,monthsLeft:o,startDate:t.get("instStartDate"),originalFullAmount:a,timestamp:Date.now()};if(!i.description||!i.startDate){showNotification("Description and Start Date are required.","error");return}state.installments.push(i),saveData(),renderDashboard(),closeModal("formModal"),showNotification("Installment plan added.","success")}function openEditInstallmentForm(e){let t=state.installments.find(t=>t.id===e);if(!t)return;let a=t.originalFullAmount||t.monthlyAmount*t.totalMonths;openFormModal("Edit Installment Plan",` <input type="hidden" name="editInstallmentId" value="${t.id}"> <div><label class="block text-sm font-medium mb-1">Description</label><input type="text" name="instDescription" value="${t.description}" required></div> <div><label class="block text-sm font-medium mb-1">Full Amount</label><input type="number" name="instFullAmount" value="${a.toFixed(2)}" step="0.01" min="0.01" required></div> <div><label class="block text-sm font-medium mb-1">Total Months</label><input type="number" name="instTotalMonths" value="${t.totalMonths}" step="1" min="1" required></div> <div><label class="block text-sm font-medium mb-1">Months Left</label><input type="number" name="instMonthsLeft" value="${t.monthsLeft}" step="1" min="0" max="${t.totalMonths}" required></div> <div><label class="block text-sm font-medium mb-1">Start Date</label><input type="date" name="instStartDate" value="${t.startDate}" required></div> <button type="submit" class="btn btn-primary w-full">Update Plan</button> `,handleEditInstallmentSubmit)}function handleEditInstallmentSubmit(e){e.preventDefault();let t=new FormData(e.target),a=t.get("editInstallmentId"),n=state.installments.find(e=>e.id===a);if(!n)return;let o=parseFloat(t.get("instFullAmount")),i=parseInt(t.get("instTotalMonths"));if(isNaN(o)||o<=0||isNaN(i)||i<=0){showNotification("Invalid full amount or total months.","error");return}if(n.description=t.get("instDescription").trim(),n.totalMonths=i,n.monthsLeft=parseInt(t.get("instMonthsLeft")),n.startDate=t.get("instStartDate"),n.monthlyAmount=o/i,n.originalFullAmount=o,n.timestamp=Date.now(),isNaN(n.monthsLeft)||n.monthsLeft<0||n.monthsLeft>n.totalMonths){showNotification("Invalid months left.","error");return}saveData(),renderDashboard(),closeModal("formModal"),showNotification("Installment plan updated.","success")}function payInstallmentMonth(e){let t=state.installments.find(t=>t.id===e);if(!t||t.monthsLeft<=0)return;let a=state.categories.filter(e=>"Income"!==e&&"Credit Card Payment"!==e).map(e=>`<option value="${e}" ${"Installment Payment"===e?"selected":""}>${e}</option>`).join("");openFormModal(`Pay Installment: ${t.description}`,`<p class="mb-2">Paying 1 month (${formatCurrency(t.monthlyAmount)}). ${t.monthsLeft-1} months will remain.</p><div><label class="block text-sm font-medium mb-1">Pay From Account</label><select id="modalInstPayAccount" name="instPayAccount" required></select></div><div><label class="block text-sm font-medium mb-1">Category</label><select id="modalInstPayCategory" name="instPayCategory" required>${a}</select></div><input type="hidden" name="installmentId" value="${e}"><button type="submit" class="btn btn-primary w-full">Confirm Payment</button>`,handlePayInstallmentSubmit),populateDropdowns()}function handlePayInstallmentSubmit(e){e.preventDefault();let t=new FormData(e.target),a=t.get("installmentId"),n=t.get("instPayAccount"),o=t.get("instPayCategory"),i=state.installments.find(e=>e.id===a),r=state.accounts.find(e=>e.id===n);if(!i||!r){showNotification("Installment or account not found.","error");return}if(i.monthsLeft<=0){showNotification("Installment plan already fully paid.","info"),closeModal("formModal");return}if(r.balance<i.monthlyAmount){showNotification(`Insufficient funds in ${r.name}.`,"warning");return}if(!o){showNotification("Please select a category for this payment.","error");return}r.balance-=i.monthlyAmount,isNaN(r.balance)&&(r.balance=0),i.monthsLeft-=1;let s=new Date().toISOString().split("T")[0],l={id:generateId(),type:"expense",amount:i.monthlyAmount,account:n,category:o,description:`Installment: ${i.description} (Month ${i.totalMonths-i.monthsLeft}/${i.totalMonths})`,date:s,timestamp:Date.now()};state.transactions.push(l);let c;i.monthsLeft<=0?(state.installments=state.installments.filter(e=>e.id!==a),c=`Installment for "${i.description}" fully paid and removed. Expense logged.`):c=`Installment month paid for "${i.description}". ${i.monthsLeft} months remaining. Expense logged.`,saveData(),renderDashboard(),populateDropdowns(),closeModal("formModal"),showNotification(c,"success"),refreshMonthlyViewIfRelevant(s)}function deleteInstallment(e){let t=state.installments.find(t=>t.id===e);t&&confirm(`Delete installment plan "${t.description}"? This removes the record only.`)&&(state.installments=state.installments.filter(t=>t.id!==e),saveData(),renderDashboard(),showNotification("Installment plan deleted.","success"))}function openPayCcItemForm(e){let t=state.creditCard.transactions.find(t=>t.id===e);if(!t)return;let a=t.amount-(t.paidAmount||0);if(a<=.005){showNotification("This item is already fully paid/settled.","info");return}let n="Credit Card Payment",o="",i=state.categories.filter(e=>"income"!==e.toLowerCase()&&e.toLowerCase()!==n.toLowerCase()).sort((e,t)=>e.localeCompare(t));state.categories.some(e=>e.toLowerCase()===n.toLowerCase())?o+=`<option value="${n}" selected>${n}</option>`:o+=`<option value="${n}" selected>${n} (Suggested)</option>`,i.forEach(e=>{o+=`<option value="${e}">${e}</option>`});let r=`
-      <input type="hidden" name="ccItemId" value="${t.id}">
-      <p class="mb-2">Item Amount: ${formatCurrency(t.amount)}</p>
-      <p class="mb-2">Paid So Far: ${formatCurrency(t.paidAmount||0)}</p>
-      <p class="mb-2">Remaining on Item: <strong class="text-danger">${formatCurrency(a)}</strong></p>
+        `;
+  openFormModal(
+    "Add New Installment Plan",
+    formHtml,
+    handleAddInstallmentSubmit
+  );
+  const instStartDateInput = $("#instStartDate");
+  if (instStartDateInput)
+    instStartDateInput.value = new Date().toISOString().split("T")[0];
+
+  // Add listener to ensure monthsLeft is not greater than totalMonths
+  const totalMonthsInput = $("#instTotalMonths");
+  const monthsLeftInput = $("#instMonthsLeft");
+  if (totalMonthsInput && monthsLeftInput) {
+    const setMaxMonthsLeft = () => {
+      const total = parseInt(totalMonthsInput.value);
+      if (!isNaN(total) && total > 0) {
+        monthsLeftInput.max = total;
+        if (parseInt(monthsLeftInput.value) > total) {
+          monthsLeftInput.value = total;
+        }
+      } else {
+        monthsLeftInput.removeAttribute("max");
+      }
+    };
+    totalMonthsInput.addEventListener("input", setMaxMonthsLeft);
+    // Set initial max if totalMonths has a default or is pre-filled
+    setMaxMonthsLeft();
+  }
+}
+
+function handleAddInstallmentSubmit(event) {
+  event.preventDefault();
+  const formData = new FormData(event.target);
+  const fullAmount = parseFloat(formData.get("instFullAmount"));
+  const totalMonths = parseInt(formData.get("instTotalMonths"));
+  let monthsLeft = parseInt(formData.get("instMonthsLeft")); // Get from new field
+
+  if (
+    isNaN(fullAmount) ||
+    fullAmount <= 0 ||
+    isNaN(totalMonths) ||
+    totalMonths <= 0
+  ) {
+    showNotification("Invalid full amount or total months.", "error");
+    return;
+  }
+
+  // Validate and set monthsLeft
+  if (isNaN(monthsLeft) || monthsLeft > totalMonths || monthsLeft < 0) {
+    monthsLeft = totalMonths; // Default to totalMonths if invalid or not provided
+  }
+
+  const monthlyAmount = fullAmount / totalMonths; // Monthly amount is based on the full original term
+
+  const newInstallment = {
+    id: generateId(),
+    description: formData.get("instDescription").trim(),
+    monthlyAmount: monthlyAmount,
+    totalMonths: totalMonths,
+    monthsLeft: monthsLeft, // Use the potentially adjusted monthsLeft
+    startDate: formData.get("instStartDate"),
+    originalFullAmount: fullAmount,
+    timestamp: Date.now(),
+  };
+
+  if (!newInstallment.description || !newInstallment.startDate) {
+    showNotification("Description and Start Date are required.", "error");
+    return;
+  }
+
+  state.installments.push(newInstallment);
+  saveData();
+  renderDashboard(); // This will call renderInstallmentList
+  closeModal("formModal");
+  showNotification("Installment plan added.", "success");
+}
+
+function openEditInstallmentForm(id) {
+  const i = state.installments.find((item) => item.id === id);
+  if (!i) return;
+  const currentFullAmount =
+    i.originalFullAmount || i.monthlyAmount * i.totalMonths;
+  openFormModal(
+    "Edit Installment Plan",
+    ` <input type="hidden" name="editInstallmentId" value="${
+      i.id
+    }"> <div><label class="block text-sm font-medium mb-1">Description</label><input type="text" name="instDescription" value="${
+      i.description
+    }" required></div> <div><label class="block text-sm font-medium mb-1">Full Amount</label><input type="number" name="instFullAmount" value="${currentFullAmount.toFixed(
+      2
+    )}" step="0.01" min="0.01" required></div> <div><label class="block text-sm font-medium mb-1">Total Months</label><input type="number" name="instTotalMonths" value="${
+      i.totalMonths
+    }" step="1" min="1" required></div> <div><label class="block text-sm font-medium mb-1">Months Left</label><input type="number" name="instMonthsLeft" value="${
+      i.monthsLeft
+    }" step="1" min="0" max="${
+      i.totalMonths
+    }" required></div> <div><label class="block text-sm font-medium mb-1">Start Date</label><input type="date" name="instStartDate" value="${
+      i.startDate
+    }" required></div> <button type="submit" class="btn btn-primary w-full">Update Plan</button> `,
+    handleEditInstallmentSubmit
+  );
+}
+
+function handleEditInstallmentSubmit(event) {
+  event.preventDefault();
+  const form = new FormData(event.target);
+  const id = form.get("editInstallmentId");
+  const inst = state.installments.find((i) => i.id === id);
+  if (!inst) return;
+  const fullAmount = parseFloat(form.get("instFullAmount"));
+  const totalMonths = parseInt(form.get("instTotalMonths"));
+  if (
+    isNaN(fullAmount) ||
+    fullAmount <= 0 ||
+    isNaN(totalMonths) ||
+    totalMonths <= 0
+  ) {
+    showNotification("Invalid full amount or total months.", "error");
+    return;
+  }
+  inst.description = form.get("instDescription").trim();
+  inst.totalMonths = totalMonths;
+  inst.monthsLeft = parseInt(form.get("instMonthsLeft"));
+  inst.startDate = form.get("instStartDate");
+  inst.monthlyAmount = fullAmount / totalMonths;
+  inst.originalFullAmount = fullAmount;
+  inst.timestamp = Date.now();
+  if (
+    isNaN(inst.monthsLeft) ||
+    inst.monthsLeft < 0 ||
+    inst.monthsLeft > inst.totalMonths
+  ) {
+    showNotification("Invalid months left.", "error");
+    return;
+  }
+  saveData();
+  renderDashboard();
+  closeModal("formModal");
+  showNotification("Installment plan updated.", "success");
+}
+
+function payInstallmentMonth(installmentId) {
+  const installment = state.installments.find((i) => i.id === installmentId);
+  if (!installment || installment.monthsLeft <= 0) return;
+  const categoryOptions = state.categories
+    .filter((c) => c !== "Income" && c !== "Credit Card Payment")
+    .map(
+      (cat) =>
+        `<option value="${cat}" ${
+          cat === "Installment Payment" ? "selected" : ""
+        }>${cat}</option>`
+    )
+    .join("");
+  openFormModal(
+    `Pay Installment: ${installment.description}`,
+    `<p class="mb-2">Paying 1 month (${formatCurrency(
+      installment.monthlyAmount
+    )}). ${
+      installment.monthsLeft - 1
+    } months will remain.</p><div><label class="block text-sm font-medium mb-1">Pay From Account</label><select id="modalInstPayAccount" name="instPayAccount" required></select></div><div><label class="block text-sm font-medium mb-1">Category</label><select id="modalInstPayCategory" name="instPayCategory" required>${categoryOptions}</select></div><input type="hidden" name="installmentId" value="${installmentId}"><button type="submit" class="btn btn-primary w-full">Confirm Payment</button>`,
+    handlePayInstallmentSubmit
+  );
+  populateDropdowns();
+}
+
+// Replace the existing handlePayInstallmentSubmit function with this:
+function handlePayInstallmentSubmit(event) {
+  event.preventDefault();
+  const form = new FormData(event.target);
+  const installmentId = form.get("installmentId"),
+    accountId = form.get("instPayAccount"),
+    category = form.get("instPayCategory");
+
+  const installment = state.installments.find((i) => i.id === installmentId);
+  const account = state.accounts.find((acc) => acc.id === accountId);
+
+  if (!installment || !account) {
+    showNotification("Installment or account not found.", "error");
+    return;
+  }
+  if (installment.monthsLeft <= 0) {
+    // Should ideally not happen if button is hidden, but good check
+    showNotification("Installment plan already fully paid.", "info");
+    closeModal("formModal"); // Close modal if somehow opened for a paid plan
+    return;
+  }
+  if (account.balance < installment.monthlyAmount) {
+    showNotification(`Insufficient funds in ${account.name}.`, "warning");
+    return;
+  }
+  if (!category) {
+    showNotification("Please select a category for this payment.", "error");
+    return;
+  }
+
+  // Process payment
+  account.balance -= installment.monthlyAmount;
+  if (isNaN(account.balance)) account.balance = 0;
+
+  installment.monthsLeft -= 1;
+
+  const paymentDate = new Date().toISOString().split("T")[0];
+  const expenseTransaction = {
+    id: generateId(),
+    type: "expense",
+    amount: installment.monthlyAmount,
+    account: accountId,
+    category: category,
+    description: `Installment: ${installment.description} (Month ${
+      installment.totalMonths - installment.monthsLeft
+    }/${installment.totalMonths})`,
+    date: paymentDate,
+    timestamp: Date.now(),
+  };
+  state.transactions.push(expenseTransaction);
+
+  let notificationMessage;
+  if (installment.monthsLeft <= 0) {
+    // Installment is now fully paid, remove it from the list
+    state.installments = state.installments.filter(
+      (i) => i.id !== installmentId
+    );
+    notificationMessage = `Installment for "${installment.description}" fully paid and removed. Expense logged.`;
+  } else {
+    notificationMessage = `Installment month paid for "${installment.description}". ${installment.monthsLeft} months remaining. Expense logged.`;
+  }
+
+  saveData();
+  renderDashboard(); // This will re-render the installment list
+  populateDropdowns();
+  closeModal("formModal");
+  showNotification(notificationMessage, "success");
+  refreshMonthlyViewIfRelevant(paymentDate);
+}
+
+function deleteInstallment(installmentId) {
+  const installment = state.installments.find((i) => i.id === installmentId);
+  if (!installment) return;
+  if (
+    confirm(
+      `Delete installment plan "${installment.description}"? This removes the record only.`
+    )
+  ) {
+    state.installments = state.installments.filter(
+      (i) => i.id !== installmentId
+    );
+    saveData();
+    renderDashboard();
+    showNotification("Installment plan deleted.", "success");
+  }
+}
+
+function openPayCcItemForm(ccTransactionId) {
+  const item = state.creditCard.transactions.find(
+    (t) => t.id === ccTransactionId
+  );
+  if (!item) return;
+  const remaining = item.amount - (item.paidAmount || 0);
+  if (remaining <= 0.005) {
+    showNotification("This item is already fully paid/settled.", "info");
+    return;
+  }
+
+  const ccPaymentCategoryName = "Credit Card Payment";
+  let categoryOptions = "";
+  const otherCcCategories = state.categories
+    .filter(
+      (c) =>
+        c.toLowerCase() !== "income" &&
+        // c.toLowerCase() !== 'debt repayment' && // Not relevant here
+        c.toLowerCase() !== ccPaymentCategoryName.toLowerCase()
+    )
+    .sort((a, b) => a.localeCompare(b));
+
+  if (
+    state.categories.some(
+      (c) => c.toLowerCase() === ccPaymentCategoryName.toLowerCase()
+    )
+  ) {
+    categoryOptions += `<option value="${ccPaymentCategoryName}" selected>${ccPaymentCategoryName}</option>`;
+  } else {
+    categoryOptions += `<option value="${ccPaymentCategoryName}" selected>${ccPaymentCategoryName} (Suggested)</option>`;
+  }
+  otherCcCategories.forEach((cat) => {
+    categoryOptions += `<option value="${cat}">${cat}</option>`;
+  });
+
+  const formHtml = `
+      <input type="hidden" name="ccItemId" value="${item.id}">
+      <p class="mb-2">Item Amount: ${formatCurrency(item.amount)}</p>
+      <p class="mb-2">Paid So Far: ${formatCurrency(item.paidAmount || 0)}</p>
+      <p class="mb-2">Remaining on Item: <strong class="text-danger">${formatCurrency(
+        remaining
+      )}</strong></p>
       <div>
           <label for="ccItemPayAmount" class="block text-sm font-medium mb-1">Payment Amount</label>
-          <input type="number" id="ccItemPayAmount" name="ccItemPayAmount" step="0.01" min="0.01" max="${a.toFixed(2)}" value="${a.toFixed(2)}" required>
+          <input type="number" id="ccItemPayAmount" name="ccItemPayAmount" step="0.01" min="0.01" max="${remaining.toFixed(
+            2
+          )}" value="${remaining.toFixed(2)}" required>
       </div>
       <div>
           <label for="modalCcPayFromAccount" class="block text-sm font-medium mb-1">Pay From Account</label>
@@ -241,13 +3538,939 @@ Warning: This will also remove the associated CC transaction record.`),confirm(a
       </div>
       <div id="ccPaymentCategoryGroup">
           <label for="modalCcPayCategory" class="block text-sm font-medium mb-1">Category for this Payment</label>
-          <select id="modalCcPayCategory" name="ccPayCategory" required>${o}</select>
+          <select id="modalCcPayCategory" name="ccPayCategory" required>${categoryOptions}</select>
       </div>
       <button type="submit" class="btn btn-primary w-full mt-3">Make Payment</button>
-  `;openFormModal(`Pay CC Item: ${t.description.substring(0,30)}...`,r,handlePayCcItemSubmit),populateDropdowns();let s=document.getElementById("logCcPaymentAsExpense"),l=document.getElementById("ccPaymentCategoryGroup"),c=document.getElementById("modalCcPayCategory");s&&l&&c&&(l.style.display=s.checked?"block":"none",c.required=s.checked,s.onchange=()=>{s.checked?(l.style.display="block",c.required=!0):(l.style.display="none",c.required=!1)})}function handlePayCcItemSubmit(e){e.preventDefault();let t=new FormData(e.target),a=t.get("ccItemId"),n=parseFloat(t.get("ccItemPayAmount")),o=t.get("ccPayFromAccount"),i="on"===t.get("logCcPaymentAsExpense"),r=i?t.get("ccPayCategory"):null,s=state.creditCard.transactions.find(e=>e.id===a),l=state.accounts.find(e=>e.id===o);if(!s||!l){showNotification("Item or account not found.","error");return}let c=s.amount-(s.paidAmount||0);if(isNaN(n)||n<=0||n>c+.005){showNotification("Invalid payment amount for CC item.","error");return}if(i&&!r){showNotification("Please select a category for this payment if logging as an expense.","error");return}if(l.balance<n){showNotification(`Insufficient funds in ${l.name}.`,"warning");return}l.balance-=n,isNaN(l.balance)&&(l.balance=0),s.paidAmount=(s.paidAmount||0)+n,s.paidAmount>=s.amount-.005&&(s.paidOff=!0,s.paidAmount=s.amount);let d=`Payment of ${formatCurrency(n)} for CC item "${s.description.substring(0,20)}..." recorded.`,u=new Date().toISOString().split("T")[0];if(i){let m={id:generateId(),type:"expense",amount:n,account:o,category:r,description:`CC Pmt: ${s.description.substring(0,20)}${s.description.length>20?"...":""}`,date:u,timestamp:Date.now()};state.transactions.push(m),d+=" Expense logged.",refreshMonthlyViewIfRelevant(u)}else d+=" Not logged as expense.";s.paidOff&&(d=`CC item "${s.description.substring(0,20)}..." fully paid.${i?" Expense logged.":" Not logged as expense."}`),saveData(),renderDashboard(),renderCreditCardSection(),"block"===$("#ccHistoryModal").style.display&&openCcHistoryModal(),closeModal("formModal"),showNotification(d,"success")}function openSettingsModal(){renderSettingsForm(),setupSettingsTabs();let e=$("#storageSizeInfo");e&&(e.textContent=`Approx. Storage Used: ${getFormattedLocalStorageSize(STORAGE_KEY)}`),$("#settingsModal").style.display="block",cancelDeleteAllData(),displayAppVersion()}function renderSettingsForm(){let e=$("#accountManagementList");e?(e.innerHTML="",state.accounts.forEach(t=>{let a=document.createElement("div");a.className="grid grid-cols-1 sm:grid-cols-[minmax(0,2fr),minmax(0,2fr)] gap-x-3 gap-y-2 items-center py-1";let n=document.createElement("input");n.type="text",n.name=`accountName_${t.id}`,n.value=t.name,n.dataset.accountId=t.id,n.className="!py-1 !px-2 text-sm rounded placeholder-gray-400",n.style.backgroundColor="var(--bg-secondary)",n.style.borderColor="var(--border-color)",n.style.color="var(--text-primary)","cash"===t.id&&(n.readOnly=!0,n.classList.add("text-gray-400","cursor-not-allowed"));let o=document.createElement("input");o.type="number",o.name=`accountBalance_${t.id}`,o.value=t.balance.toFixed(2),o.step="0.01",o.dataset.accountId=t.id,o.className="!py-1 !px-2 text-sm rounded placeholder-gray-400",o.style.backgroundColor="var(--bg-secondary)",o.style.borderColor="var(--border-color)",o.style.color="var(--text-primary)",a.appendChild(n),a.appendChild(o),e.appendChild(a)})):console.error("#accountManagementList element not found in #settingsAccountsPanel.");let t=$("#manageAccountsForm");t&&(t.onsubmit=handleManageAccountsSubmit);let a=$("#settingsCcLimitAmount");a&&(a.value=(state.creditCard&&state.creditCard.limit||0).toFixed(2),a.style.backgroundColor="var(--bg-secondary)",a.style.borderColor="var(--border-color)",a.style.color="var(--text-primary)");let n=$("#settingsCcLimitForm");n&&(n.onsubmit=e=>{e.preventDefault();let t=new FormData(n),a=parseFloat(t.get("ccLimitAmount"));if(isNaN(a)||a<0){showNotification("Invalid credit limit amount.","error");return}state.creditCard||(state.creditCard={limit:0,transactions:[]}),state.creditCard.limit=a,saveData(),renderCreditCardSection(),"block"===$("#ccHistoryModal").style.display&&openCcHistoryModal(),showNotification(`Credit limit set to ${formatCurrency(a)}.`,"success")});let o=$("#toggleCcSection");o&&(state.settings||(state.settings={initialSetupDone:!1,showCcDashboardSection:!0,theme:"dark"}),o.checked=void 0===state.settings.showCcDashboardSection||state.settings.showCcDashboardSection,o.dataset.listenerAttached||(o.onchange=()=>{state.settings||(state.settings={initialSetupDone:!1,showCcDashboardSection:!0,theme:"dark"}),state.settings.showCcDashboardSection=o.checked,saveData(),updateCcDashboardSectionVisibility(),showNotification(`Credit Card section on dashboard will now be ${o.checked?"shown":"hidden"}.`,"info")},o.dataset.listenerAttached="true"));let i=$("#addCategoryForm");if(i){i.onsubmit=addCategory;let r=i.querySelector("#newCategoryName");r&&(r.style.backgroundColor="var(--bg-secondary)",r.style.borderColor="var(--border-color)",r.style.color="var(--text-primary)")}renderCategorySettingsList()}function renderCategorySettingsList(){let e=$("#categorySettingsList");if(!e){console.error("#categorySettingsList element not found.");return}e.innerHTML="";let t=[...state.categories].sort((e,t)=>e.localeCompare(t));t.forEach(t=>{let a=document.createElement("li");a.className="flex justify-between items-center p-2 rounded",a.style.backgroundColor="var(--bg-secondary)",a.style.borderColor="var(--border-color)",a.style.borderWidth="1px";let n=`<input type="text" value="${t}" data-original-name="${t}" class="bg-transparent border-none focus:ring-0 focus:outline-none p-0 flex-grow mr-2 text-sm">`,o=document.createElement("div");o.className="flex items-center gap-x-2";let i=`<button class="text-gray-400 hover:text-expense focus:outline-none" onclick="deleteCategory('${t}')" title="Delete Category"><i class="fas fa-times"></i></button>`;a.innerHTML=n,o.innerHTML='<button class="btn btn-primary btn-sm !py-0.5 !px-2 text-xs" onclick="renameCategory(this)">Save</button>'+i,a.appendChild(o),e.appendChild(a)})}function renameCategory(e){let t=e.closest("li"),a=t.querySelector('input[type="text"]'),n=a.value.trim(),o=a.dataset.originalName;if(!n){showNotification("Category name cannot be empty.","error"),a.value=o;return}if(n===o)return;if(state.categories.some(e=>e.toLowerCase()===n.toLowerCase()&&e!==o)){showNotification(`Category name "${n}" already exists.`,"error"),a.value=o;return}let i=state.categories.indexOf(o);if(i>-1){state.categories[i]=n,state.categories.sort((e,t)=>e.localeCompare(t));let r=0;state.transactions.forEach(e=>{e.category===o&&(e.category=n,r++)}),saveData(),populateDropdowns(),renderCategorySettingsList(),showNotification(`Category "${o}" renamed to "${n}". ${r} transaction(s) updated.`,"success")}else showNotification(`Original category "${o}" not found.`,"error"),a.value=o}function addCategory(e){e.preventDefault();let t=$("#newCategoryName"),a=t.value.trim();if(!a){showNotification("Category name cannot be empty.","error");return}if(state.categories.some(e=>e.toLowerCase()===a.toLowerCase())){showNotification(`Category "${a}" already exists.`,"warning"),t.value="";return}state.categories.push(a),state.categories.sort((e,t)=>e.localeCompare(t)),saveData(),populateDropdowns(),renderCategorySettingsList(),t.value="",showNotification(`Category "${a}" added.`,"success")}function deleteCategory(e){if("Other"===e){showNotification("The 'Other' category cannot be deleted.","warning");return}let t=state.transactions.some(t=>t.category===e);if(t){showNotification(`Category "${e}" is in use and cannot be deleted. Reassign transactions first or rename the category.`,"error");return}if(!state.categories.includes(e)){showNotification(`Category "${e}" not found.`,"error");return}confirm(`Are you sure you want to delete the category "${e}"? This action cannot be undone if the category is not in use.`)&&(state.categories=state.categories.filter(t=>t!==e),saveData(),populateDropdowns(),renderCategorySettingsList(),showNotification(`Category "${e}" deleted.`,"success"))}function handleSetCcLimitSubmit(e){e.preventDefault();let t=new FormData(e.target),a=parseFloat(t.get("ccLimitAmount"));if(isNaN(a)||a<0){showNotification("Invalid credit limit.","error");return}state.creditCard.limit=a,saveData(),renderCreditCardSection(),"block"===$("#ccHistoryModal").style.display&&openCcHistoryModal(),closeModal("formModal"),showNotification(`Credit limit set to ${formatCurrency(a)}.`,"success")}function updateCcDashboardSectionVisibility(){let e=$("#creditCardDashboardSection");if(e){let t=!0;state.settings&&void 0!==state.settings.showCcDashboardSection?t=state.settings.showCcDashboardSection:void 0===state.settings&&(state.settings={initialSetupDone:!1,showCcDashboardSection:!0},console.log("state.settings was undefined, initialized showCcDashboardSection to true")),t?e.style.display="":e.style.display="none"}$("#ccLimitSettingsCard")}function handleManageAccountsSubmit(e){e.preventDefault();let t=new FormData(e.target),a=!1,n=[];if(state.accounts.forEach(e=>{let o=t.get(`accountName_${e.id}`),i=t.get(`accountBalance_${e.id}`);if(null===o||null===i){console.warn(`Inputs for account ${e.id} not found in form data.`);return}let r=o.trim(),s=parseFloat(i);"cash"!==e.id&&(r?r!==e.name&&(state.accounts.some(t=>t.id!==e.id&&t.name.toLowerCase()===r.toLowerCase())?n.push(`Account name "${r}" already exists. Please choose a unique name.`):(console.log(`Account ${e.id} name changed from "${e.name}" to "${r}"`),e.name=r,a=!0)):n.push(`Account name for "${e.name}" (ID: ${e.id}) cannot be empty.`)),isNaN(s)?n.push(`Invalid balance entered for account "${e.name}". Please enter a valid number.`):Math.abs(e.balance-s)>.005&&(console.log(`Account ${e.id} balance changed from ${e.balance.toFixed(2)} to ${s.toFixed(2)}`),e.balance=s,a=!0)}),n.length>0){n.forEach(e=>showNotification(e,"error",6e3)),renderSettingsForm();return}a?(state.settings&&!state.settings.initialSetupDone&&(state.settings.initialSetupDone=!0),saveData(),renderDashboard(),populateDropdowns(),renderSettingsForm(),showNotification("Account names and/or balances updated successfully.","success")):showNotification("No changes detected in account names or balances.","info")}function exportData(){try{let e=JSON.stringify(state,null,2),t=new Blob([e],{type:"application/json"}),a=URL.createObjectURL(t),n=document.createElement("a"),o=new Date().toISOString().slice(0,19).replace(/[:T]/g,"-");n.download=`kaasi-backup-${o}.json`,n.href=a,document.body.appendChild(n),n.click(),document.body.removeChild(n),URL.revokeObjectURL(a),showNotification("Data exported.","success")}catch(i){console.error("Export failed:",i),showNotification("Data export failed.","error")}}function importData(e){let t=e.target.files[0];if(!t)return;if(!confirm("Importing data will OVERWRITE ALL current data. Proceed?")){e.target.value=null;return}let a=new FileReader;a.onload=t=>{try{let a=JSON.parse(t.target.result);if(a&&a.accounts&&void 0!==a.transactions&&a.categories&&a.creditCard)state=deepMerge(getDefaultState(),a),ensureDefaultAccounts(),ensureDefaultCategories(),state.accounts.forEach(e=>{isNaN(e.balance)&&(e.balance=0)}),isNaN(state.creditCard.limit)&&(state.creditCard.limit=0),saveData(),initializeUI(!0),showNotification("Data imported. Application refreshed.","success"),closeModal("settingsModal");else throw Error("Invalid data structure.")}catch(n){console.error("Import failed:",n),showNotification(`Import failed: ${n.message}`,"error")}finally{e.target.value=null}},a.onerror=()=>{showNotification("Failed to read file.","error"),e.target.value=null},a.readAsText(t)}function initiateDeleteAllData(){$("#initiateDeleteBtn").classList.add("hidden"),$("#deleteConfirmationSection").classList.remove("hidden"),resetDeleteSlider()}function cancelDeleteAllData(){$("#initiateDeleteBtn").classList.remove("hidden"),$("#deleteConfirmationSection").classList.add("hidden"),resetDeleteSlider()}let maxTranslateX=0,isDragging=!1;function setupDeleteSlider(){let e=$("#deleteSliderContainer"),t=$("#deleteSliderHandle"),a=e.querySelector(".slide-to-confirm-track");if(!e||!t||!a)return;let n=0,o=0,i=()=>{maxTranslateX=e.offsetWidth-t.offsetWidth-4};window.resetDeleteSlider=()=>{isDragging=!1,o=0,t.style.transition="transform 0.2s ease-out, background-color 0.2s ease-out",a.style.transition="width 0.2s ease-out, background-color 0.2s ease-out",t.style.transform="translateX(0px)",a.style.width="0px",a.style.backgroundColor="var(--button-success-bg)",t.innerHTML='<i class="fas fa-arrow-right"></i>',t.style.backgroundColor="var(--accent-primary)",t.style.cursor="grab",e.style.cursor="pointer"};let r=o=>{i(),isDragging=!0,n=o-t.getBoundingClientRect().left,t.style.transition="none",a.style.transition="none",t.style.cursor="grabbing",e.style.cursor="grabbing"},s=i=>{if(isDragging)o=Math.max(0,Math.min(i-e.getBoundingClientRect().left-n,maxTranslateX)),t.style.transform=`translateX(${o}px)`,a.style.width=`${o+t.offsetWidth/2}px`},l=()=>{isDragging&&(isDragging=!1,t.style.cursor="grab",e.style.cursor="pointer",t.style.transition="transform 0.2s ease-out, background-color 0.2s ease-out",a.style.transition="width 0.2s ease-out, background-color 0.2s ease-out",o>=maxTranslateX-1?completeDeletion():resetDeleteSlider())};t.addEventListener("mousedown",e=>r(e.clientX)),document.addEventListener("mousemove",e=>{isDragging&&s(e.clientX)}),document.addEventListener("mouseup",l),t.addEventListener("touchstart",e=>{e.preventDefault(),r(e.touches[0].clientX)},{passive:!1}),document.addEventListener("touchmove",e=>{isDragging&&(e.preventDefault(),s(e.touches[0].clientX))},{passive:!1}),document.addEventListener("touchend",l),window.addEventListener("resize",()=>{$("#deleteConfirmationSection")&&!$("#deleteConfirmationSection").classList.contains("hidden")&&(i(),resetDeleteSlider())})}function completeDeletion(){let e=$("#deleteSliderHandle"),t=$(".slide-to-confirm-track");e.innerHTML='<i class="fas fa-check"></i>',e.style.backgroundColor="var(--button-success-bg)",t.style.width="100%",t.style.backgroundColor="var(--button-success-bg)",e.style.transform=`translateX(${maxTranslateX}px)`,isDragging=!1,e.style.pointerEvents="none",setTimeout(()=>{localStorage.removeItem(STORAGE_KEY),state=getDefaultState(),ensureDefaultAccounts(),ensureDefaultCategories(),initializeUI(!0),closeModal("settingsModal"),showNotification("All data deleted.","success"),e.style.pointerEvents="auto"},500)}function openCashCounter(){let e=$("#cashCounterForm"),t=e.querySelector(".grid");for(;t.children.length>3;)t.removeChild(t.lastChild);[5e3,1e3,500,100,50,20,10,5,2,1].forEach(e=>{let a=document.createElement("span");a.className="font-medium text-right pr-2 text-sm",a.textContent=`Rs. ${e}`;let n=document.createElement("input");n.type="number",n.min="0",n.dataset.denom=e,n.className="text-center bg-gray-600 border border-gray-500 rounded px-1 py-0.5 w-16 mx-auto text-sm",n.placeholder="0",n.oninput=calculateCashTotal;let o=document.createElement("span");o.className="text-right text-gray-400 text-sm",o.id=`cashTotal-${e}`,o.textContent=formatCurrency(0),t.appendChild(a),t.appendChild(n),t.appendChild(o)}),calculateCashTotal(),$("#cashCounterModal").style.display="block",$("#cashCounterComparison").innerHTML=""}function calculateCashTotal(){let e=0;$$('#cashCounterForm input[type="number"]').forEach(t=>{let a=parseInt(t.value)||0,n=parseInt(t.dataset.denom),o=a*n;e+=o;let i=$(`#cashTotal-${n}`);i&&(i.textContent=formatCurrency(o))}),$("#cashCounterTotal").textContent=formatCurrency(e);let t=state.accounts.find(e=>"cash"===e.id);if(t){let a=e-t.balance,n=$("#cashCounterComparison");.01>Math.abs(a)?n.innerHTML=`<p class="text-success">Counted cash matches calculated balance: ${formatCurrency(t.balance)}</p>`:a>0?n.innerHTML=`<p class="text-warning">Counted cash is ${formatCurrency(a)} MORE than calculated balance (${formatCurrency(t.balance)})</p>`:n.innerHTML=`<p class="text-danger">Counted cash is ${formatCurrency(Math.abs(a))} LESS than calculated balance (${formatCurrency(t.balance)})</p>`}}function closeModal(e){let t=$(`#${e}`);t&&(t.style.display="none"),"formModal"===e&&($("#dynamicForm").innerHTML="",$("#dynamicForm").onsubmit=null),"settingsModal"===e&&cancelDeleteAllData()}function openFormModal(e,t,a){$("#formModalTitle").textContent=e;let n=$("#dynamicForm");n.innerHTML=t,n.onsubmit=a,$("#formModal").style.display="block";let o=n.querySelector('input:not([type="hidden"]), select, textarea');o&&o.focus()}function openEditTransactionForm(e,t){openEditTransactionModal(e,t)}function openEditCcTransactionForm(e){openEditCcTransactionModal(e)}function handleBackupReminderDismiss(e){try{localStorage.setItem(e,getCurrentDateString()),console.log(`Backup reminder dismissed for key: ${e} on ${getCurrentDateString()}`)}catch(t){console.error("Error saving backup reminder dismissal state:",t)}closeModal("formModal")}function showBackupReminderPopup(e){let t=`
+  `;
+  openFormModal(
+    `Pay CC Item: ${item.description.substring(0, 30)}...`,
+    formHtml,
+    handlePayCcItemSubmit
+  );
+  populateDropdowns();
+
+  // Add event listener for the new checkbox for CC payment
+  const logCcExpenseCheckbox = document.getElementById("logCcPaymentAsExpense");
+  const ccCategoryGroupDiv = document.getElementById("ccPaymentCategoryGroup");
+  const ccCategorySelect = document.getElementById("modalCcPayCategory");
+
+  if (logCcExpenseCheckbox && ccCategoryGroupDiv && ccCategorySelect) {
+    // Initial state based on checkbox
+    ccCategoryGroupDiv.style.display = logCcExpenseCheckbox.checked
+      ? "block"
+      : "none";
+    ccCategorySelect.required = logCcExpenseCheckbox.checked;
+
+    logCcExpenseCheckbox.onchange = () => {
+      if (logCcExpenseCheckbox.checked) {
+        ccCategoryGroupDiv.style.display = "block";
+        ccCategorySelect.required = true;
+      } else {
+        ccCategoryGroupDiv.style.display = "none";
+        ccCategorySelect.required = false;
+      }
+    };
+  }
+}
+
+function handlePayCcItemSubmit(event) {
+  event.preventDefault();
+  const form = new FormData(event.target);
+  const ccItemId = form.get("ccItemId");
+  const paymentAmount = parseFloat(form.get("ccItemPayAmount"));
+  const accountId = form.get("ccPayFromAccount");
+  const logAsExpense = form.get("logCcPaymentAsExpense") === "on";
+  const category = logAsExpense ? form.get("ccPayCategory") : null;
+
+  const item = state.creditCard.transactions.find((t) => t.id === ccItemId);
+  const account = state.accounts.find((acc) => acc.id === accountId);
+
+  if (!item || !account) {
+    showNotification("Item or account not found.", "error");
+    return;
+  }
+  const remainingOnItem = item.amount - (item.paidAmount || 0);
+  if (
+    isNaN(paymentAmount) ||
+    paymentAmount <= 0 ||
+    paymentAmount > remainingOnItem + 0.005
+  ) {
+    showNotification("Invalid payment amount for CC item.", "error");
+    return;
+  }
+  if (logAsExpense && !category) {
+    showNotification(
+      "Please select a category for this payment if logging as an expense.",
+      "error"
+    );
+    return;
+  }
+  if (account.balance < paymentAmount) {
+    showNotification(`Insufficient funds in ${account.name}.`, "warning");
+    return;
+  }
+
+  account.balance -= paymentAmount;
+  if (isNaN(account.balance)) account.balance = 0;
+
+  item.paidAmount = (item.paidAmount || 0) + paymentAmount;
+  if (item.paidAmount >= item.amount - 0.005) {
+    item.paidOff = true;
+    item.paidAmount = item.amount;
+  }
+
+  let notificationMessage = `Payment of ${formatCurrency(
+    paymentAmount
+  )} for CC item "${item.description.substring(0, 20)}..." recorded.`;
+  const paymentDate = new Date().toISOString().split("T")[0];
+
+  if (logAsExpense) {
+    const expenseTx = {
+      id: generateId(),
+      type: "expense",
+      amount: paymentAmount,
+      account: accountId,
+      category: category,
+      description: `CC Pmt: ${item.description.substring(0, 20)}${
+        item.description.length > 20 ? "..." : ""
+      }`,
+      date: paymentDate,
+      timestamp: Date.now(),
+    };
+    state.transactions.push(expenseTx);
+    notificationMessage += " Expense logged.";
+    refreshMonthlyViewIfRelevant(paymentDate);
+  } else {
+    notificationMessage += " Not logged as expense.";
+  }
+  if (item.paidOff) {
+    notificationMessage = `CC item "${item.description.substring(
+      0,
+      20
+    )}..." fully paid.${
+      logAsExpense ? " Expense logged." : " Not logged as expense."
+    }`;
+  }
+
+  saveData();
+  renderDashboard();
+  renderCreditCardSection();
+  if ($("#ccHistoryModal").style.display === "block") openCcHistoryModal();
+  closeModal("formModal");
+  showNotification(notificationMessage, "success");
+}
+
+// --- SETTINGS LOGIC ---
+function openSettingsModal() {
+  // First, render the dynamic content within the panels (like account lists, category lists)
+  renderSettingsForm(); // This function populates the content of the panels
+
+  // Then, set up the tab navigation itself
+  setupSettingsTabs(); // This creates tab buttons and sets the first tab active
+
+  const storageInfoElement = $("#storageSizeInfo");
+  if (storageInfoElement) {
+    storageInfoElement.textContent = `Approx. Storage Used: ${getFormattedLocalStorageSize(
+      STORAGE_KEY
+    )}`;
+  }
+
+  $("#settingsModal").style.display = "block";
+  cancelDeleteAllData(); // Resets the delete slider if it was active
+  displayAppVersion(); // Ensure version is displayed
+}
+
+function renderSettingsForm() {
+  // --- 1. Combined Account Names & Balances Management (within #settingsAccountsPanel) ---
+  const accountManagementList = $("#accountManagementList");
+  if (!accountManagementList) {
+    console.error(
+      "#accountManagementList element not found in #settingsAccountsPanel."
+    );
+  } else {
+    accountManagementList.innerHTML = ""; // Clear previous entries
+    state.accounts.forEach((acc) => {
+      const accRow = document.createElement("div");
+      accRow.className =
+        "grid grid-cols-1 sm:grid-cols-[minmax(0,2fr),minmax(0,2fr)] gap-x-3 gap-y-2 items-center py-1";
+
+      const nameInput = document.createElement("input");
+      nameInput.type = "text";
+      nameInput.name = `accountName_${acc.id}`;
+      nameInput.value = acc.name;
+      nameInput.dataset.accountId = acc.id;
+      nameInput.className = "!py-1 !px-2 text-sm rounded placeholder-gray-400";
+      nameInput.style.backgroundColor = "var(--bg-secondary)";
+      nameInput.style.borderColor = "var(--border-color)";
+      nameInput.style.color = "var(--text-primary)";
+      if (acc.id === "cash") {
+        nameInput.readOnly = true;
+        nameInput.classList.add("text-gray-400", "cursor-not-allowed");
+      }
+
+      const balanceInput = document.createElement("input");
+      balanceInput.type = "number";
+      balanceInput.name = `accountBalance_${acc.id}`;
+      balanceInput.value = acc.balance.toFixed(2);
+      balanceInput.step = "0.01";
+      balanceInput.dataset.accountId = acc.id;
+      balanceInput.className =
+        "!py-1 !px-2 text-sm rounded placeholder-gray-400";
+      balanceInput.style.backgroundColor = "var(--bg-secondary)";
+      balanceInput.style.borderColor = "var(--border-color)";
+      balanceInput.style.color = "var(--text-primary)";
+
+      accRow.appendChild(nameInput);
+      accRow.appendChild(balanceInput);
+      accountManagementList.appendChild(accRow);
+    });
+  }
+  // Attach submit handler to the form containing accountManagementList
+  const manageAccountsForm = $("#manageAccountsForm"); // This form is in #settingsAccountsPanel
+  if (manageAccountsForm) {
+    manageAccountsForm.onsubmit = handleManageAccountsSubmit;
+  }
+
+  // --- 2. Credit Card Settings (within #settingsCreditCardPanel) ---
+  const settingsCcLimitAmountInput = $("#settingsCcLimitAmount"); // Direct ID
+  if (settingsCcLimitAmountInput) {
+    settingsCcLimitAmountInput.value = (
+      (state.creditCard && state.creditCard.limit) ||
+      0
+    ).toFixed(2);
+    settingsCcLimitAmountInput.style.backgroundColor = "var(--bg-secondary)";
+    settingsCcLimitAmountInput.style.borderColor = "var(--border-color)";
+    settingsCcLimitAmountInput.style.color = "var(--text-primary)";
+  }
+
+  const settingsCcLimitForm = $("#settingsCcLimitForm"); // Direct ID
+  if (settingsCcLimitForm) {
+    settingsCcLimitForm.onsubmit = (event) => {
+      event.preventDefault();
+      const formData = new FormData(settingsCcLimitForm);
+      const limit = parseFloat(formData.get("ccLimitAmount"));
+      if (isNaN(limit) || limit < 0) {
+        showNotification("Invalid credit limit amount.", "error");
+        return;
+      }
+      if (!state.creditCard) {
+        state.creditCard = { limit: 0, transactions: [] };
+      }
+      state.creditCard.limit = limit;
+      saveData();
+      renderCreditCardSection();
+      if ($("#ccHistoryModal").style.display === "block") openCcHistoryModal();
+      showNotification(
+        `Credit limit set to ${formatCurrency(limit)}.`,
+        "success"
+      );
+    };
+  }
+
+  const toggleCcSectionElement = $("#toggleCcSection"); // Direct ID
+  if (toggleCcSectionElement) {
+    if (!state.settings) {
+      state.settings = {
+        initialSetupDone: false,
+        showCcDashboardSection: true,
+        theme: "dark",
+      };
+    }
+    toggleCcSectionElement.checked =
+      state.settings.showCcDashboardSection !== undefined
+        ? state.settings.showCcDashboardSection
+        : true;
+    // Ensure onchange is not re-assigned if already set, or manage it carefully
+    if (!toggleCcSectionElement.dataset.listenerAttached) {
+      // Prevent multiple listeners
+      toggleCcSectionElement.onchange = () => {
+        if (!state.settings) {
+          state.settings = {
+            initialSetupDone: false,
+            showCcDashboardSection: true,
+            theme: "dark",
+          };
+        }
+        state.settings.showCcDashboardSection = toggleCcSectionElement.checked;
+        saveData();
+        updateCcDashboardSectionVisibility();
+        showNotification(
+          `Credit Card section on dashboard will now be ${
+            toggleCcSectionElement.checked ? "shown" : "hidden"
+          }.`,
+          "info"
+        );
+      };
+      toggleCcSectionElement.dataset.listenerAttached = "true";
+    }
+  }
+
+  // --- 3. Manage Expense Categories (within #settingsCategoriesPanel) ---
+  const addCategoryForm = $("#addCategoryForm"); // Direct ID
+  if (addCategoryForm) {
+    addCategoryForm.onsubmit = addCategory;
+    const newCategoryNameInput =
+      addCategoryForm.querySelector("#newCategoryName");
+    if (newCategoryNameInput) {
+      newCategoryNameInput.style.backgroundColor = "var(--bg-secondary)";
+      newCategoryNameInput.style.borderColor = "var(--border-color)";
+      newCategoryNameInput.style.color = "var(--text-primary)";
+    }
+  }
+  renderCategorySettingsList(); // This function targets #categorySettingsList directly
+
+  // Note: Data Management and Danger Zone panels are mostly static HTML elements,
+  // their functionality (buttons etc.) is typically attached once in initializeUI.
+  // If they had dynamic content needing refresh, that would go here too.
+}
+
+function renderCategorySettingsList() {
+  const categoryList = $("#categorySettingsList");
+  if (!categoryList) {
+    console.error("#categorySettingsList element not found.");
+    return;
+  }
+  categoryList.innerHTML = ""; // Clear existing list items
+
+  const sortedCategories = [...state.categories].sort((a, b) =>
+    a.localeCompare(b)
+  );
+
+  sortedCategories.forEach((cat) => {
+    const li = document.createElement("li");
+    // MODIFIED: Removed bg-gray-600, added inline style for var(--bg-secondary)
+    li.className = "flex justify-between items-center p-2 rounded";
+    li.style.backgroundColor = "var(--bg-secondary)";
+    li.style.borderColor = "var(--border-color)"; // Optional: ensure border consistency
+    li.style.borderWidth = "1px"; // Optional: ensure border consistency
+
+    // Input for category name
+    const inputElementHTML = `<input type="text" value="${cat}" data-original-name="${cat}" class="bg-transparent border-none focus:ring-0 focus:outline-none p-0 flex-grow mr-2 text-sm">`;
+
+    // Div for buttons
+    const buttonsDiv = document.createElement("div");
+    buttonsDiv.className = "flex items-center gap-x-2";
+
+    const saveButtonHTML = `<button class="btn btn-primary btn-sm !py-0.5 !px-2 text-xs" onclick="renameCategory(this)">Save</button>`;
+    const deleteButtonHTML = `<button class="text-gray-400 hover:text-expense focus:outline-none" onclick="deleteCategory('${cat}')" title="Delete Category"><i class="fas fa-times"></i></button>`;
+
+    li.innerHTML = inputElementHTML;
+    buttonsDiv.innerHTML = saveButtonHTML + deleteButtonHTML;
+    li.appendChild(buttonsDiv);
+
+    categoryList.appendChild(li);
+  });
+}
+
+function renameCategory(buttonElement) {
+  const liElement = buttonElement.closest("li");
+  const inputElement = liElement.querySelector('input[type="text"]');
+  const newName = inputElement.value.trim();
+  const originalName = inputElement.dataset.originalName;
+  if (!newName) {
+    showNotification("Category name cannot be empty.", "error");
+    inputElement.value = originalName;
+    return;
+  }
+  if (newName === originalName) return;
+  if (
+    state.categories.some(
+      (cat) =>
+        cat.toLowerCase() === newName.toLowerCase() && cat !== originalName
+    )
+  ) {
+    showNotification(`Category name "${newName}" already exists.`, "error");
+    inputElement.value = originalName;
+    return;
+  }
+  const index = state.categories.indexOf(originalName);
+  if (index > -1) {
+    state.categories[index] = newName;
+    state.categories.sort((a, b) => a.localeCompare(b));
+    let updateCount = 0;
+    state.transactions.forEach((t) => {
+      if (t.category === originalName) {
+        t.category = newName;
+        updateCount++;
+      }
+    });
+    saveData();
+    populateDropdowns();
+    renderCategorySettingsList();
+    showNotification(
+      `Category "${originalName}" renamed to "${newName}". ${updateCount} transaction(s) updated.`,
+      "success"
+    );
+  } else {
+    showNotification(`Original category "${originalName}" not found.`, "error");
+    inputElement.value = originalName;
+  }
+}
+
+function addCategory(event) {
+  event.preventDefault();
+  const input = $("#newCategoryName");
+  const newCategoryName = input.value.trim();
+  if (!newCategoryName) {
+    showNotification("Category name cannot be empty.", "error");
+    return;
+  }
+  if (
+    state.categories.some(
+      (cat) => cat.toLowerCase() === newCategoryName.toLowerCase()
+    )
+  ) {
+    showNotification(
+      `Category "${newCategoryName}" already exists.`,
+      "warning"
+    );
+    input.value = "";
+    return;
+  }
+  state.categories.push(newCategoryName);
+  state.categories.sort((a, b) => a.localeCompare(b));
+  saveData();
+  populateDropdowns();
+  renderCategorySettingsList();
+  input.value = "";
+  showNotification(`Category "${newCategoryName}" added.`, "success");
+}
+
+function deleteCategory(categoryName) {
+  if (categoryName === "Other") {
+    showNotification("The 'Other' category cannot be deleted.", "warning");
+    return;
+  }
+  const isUsed = state.transactions.some((t) => t.category === categoryName);
+  if (isUsed) {
+    showNotification(
+      `Category "${categoryName}" is in use and cannot be deleted. Reassign transactions first or rename the category.`,
+      "error"
+    );
+    return;
+  }
+  if (!state.categories.includes(categoryName)) {
+    showNotification(`Category "${categoryName}" not found.`, "error");
+    return;
+  }
+  if (
+    confirm(
+      `Are you sure you want to delete the category "${categoryName}"? This action cannot be undone if the category is not in use.`
+    )
+  ) {
+    state.categories = state.categories.filter((cat) => cat !== categoryName);
+    saveData();
+    populateDropdowns();
+    renderCategorySettingsList();
+    showNotification(`Category "${categoryName}" deleted.`, "success");
+  }
+}
+
+function handleSetCcLimitSubmit(event) {
+  event.preventDefault();
+  const formData = new FormData(event.target);
+  const limit = parseFloat(formData.get("ccLimitAmount"));
+  if (isNaN(limit) || limit < 0) {
+    showNotification("Invalid credit limit.", "error");
+    return;
+  }
+  state.creditCard.limit = limit;
+  saveData();
+  renderCreditCardSection();
+  if ($("#ccHistoryModal").style.display === "block") openCcHistoryModal();
+  closeModal("formModal");
+  showNotification(`Credit limit set to ${formatCurrency(limit)}.`, "success");
+}
+
+// --- NEW FUNCTION to control CC Dashboard Section Visibility ---
+function updateCcDashboardSectionVisibility() {
+  const ccDashboardSection = $("#creditCardDashboardSection");
+  if (ccDashboardSection) {
+    // Default to true (visible) if the setting is undefined or state.settings itself is undefined
+    let isVisible = true; // Default to true
+    if (state.settings && state.settings.showCcDashboardSection !== undefined) {
+      isVisible = state.settings.showCcDashboardSection;
+    } else if (state.settings === undefined) {
+      // If state.settings is undefined, we assume it's a fresh load before settings are established
+      // and default to showing the section. Initialize state.settings here if it's missing.
+      state.settings = {
+        initialSetupDone: false,
+        showCcDashboardSection: true,
+      };
+      console.log(
+        "state.settings was undefined, initialized showCcDashboardSection to true"
+      );
+    }
+
+    if (isVisible) {
+      ccDashboardSection.style.display = ""; // Reverts to CSS default (block, grid, etc.)
+    } else {
+      ccDashboardSection.style.display = "none";
+    }
+  }
+
+  // Also, ensure the CC Limit settings card visibility in the Settings Modal
+  // is tied to this, so users can't set a limit if the feature is "off".
+  // This part might be redundant if the CC Limit card is always part of the settings modal,
+  // but good to consider if its visibility should also be controlled.
+  // For now, we assume the ccLimitSettingsCard in the modal remains visible,
+  // and only the dashboard section is toggled.
+  // If you want to hide the CC Limit settings in the modal as well when the toggle is off:
+  const ccLimitSettingsCard = $("#ccLimitSettingsCard");
+  if (ccLimitSettingsCard) {
+    // const isVisible = (state.settings && state.settings.showCcDashboardSection !== undefined) ? state.settings.showCcDashboardSection : true;
+    // ccLimitSettingsCard.style.display = isVisible ? '' : 'none';
+    // Decided against hiding the settings card itself for now, as the toggle is within it.
+    // The toggle itself indicates the feature's status.
+  }
+}
+
+// This function will handle the submission of the new combined "Manage Account Names & Balances" form
+function handleManageAccountsSubmit(event) {
+  event.preventDefault();
+  const formData = new FormData(event.target);
+  let changesMade = false;
+  let errors = [];
+
+  state.accounts.forEach((acc) => {
+    const newNameInput = formData.get(`accountName_${acc.id}`);
+    const newBalanceInput = formData.get(`accountBalance_${acc.id}`);
+
+    if (newNameInput === null || newBalanceInput === null) {
+      console.warn(`Inputs for account ${acc.id} not found in form data.`);
+      return; // Skip if inputs are missing for some reason
+    }
+
+    const newName = newNameInput.trim();
+    const newBalance = parseFloat(newBalanceInput);
+
+    // Validate Name (if not 'cash' account)
+    if (acc.id !== "cash") {
+      if (!newName) {
+        errors.push(
+          `Account name for "${acc.name}" (ID: ${acc.id}) cannot be empty.`
+        );
+        // Optionally, revert input to original if you have access to it here, or just prevent save.
+      } else if (newName !== acc.name) {
+        // Check for duplicate names
+        if (
+          state.accounts.some(
+            (existingAcc) =>
+              existingAcc.id !== acc.id &&
+              existingAcc.name.toLowerCase() === newName.toLowerCase()
+          )
+        ) {
+          errors.push(
+            `Account name "${newName}" already exists. Please choose a unique name.`
+          );
+        } else {
+          console.log(
+            `Account ${acc.id} name changed from "${acc.name}" to "${newName}"`
+          );
+          acc.name = newName;
+          changesMade = true;
+        }
+      }
+    }
+
+    // Validate and Update Balance
+    if (isNaN(newBalance)) {
+      errors.push(
+        `Invalid balance entered for account "${acc.name}". Please enter a valid number.`
+      );
+    } else if (Math.abs(acc.balance - newBalance) > 0.005) {
+      // Check if balance actually changed
+      console.log(
+        `Account ${acc.id} balance changed from ${acc.balance.toFixed(
+          2
+        )} to ${newBalance.toFixed(2)}`
+      );
+      acc.balance = newBalance;
+      changesMade = true;
+    }
+  });
+
+  if (errors.length > 0) {
+    errors.forEach((err) => showNotification(err, "error", 6000));
+    // Optionally, re-render the form to show original values or highlight errors
+    renderSettingsForm(); // Re-render to reset inputs to current state if save fails due to validation
+    return;
+  }
+
+  if (changesMade) {
+    // Mark initial setup as done if it wasn't already,
+    // as managing accounts implies setup is complete.
+    if (state.settings && !state.settings.initialSetupDone) {
+      state.settings.initialSetupDone = true;
+    }
+    saveData();
+    renderDashboard(); // Update main dashboard
+    populateDropdowns(); // Update dropdowns everywhere
+    renderSettingsForm(); // Re-render settings form to reflect saved changes (e.g., new names)
+    showNotification(
+      "Account names and/or balances updated successfully.",
+      "success"
+    );
+  } else {
+    showNotification(
+      "No changes detected in account names or balances.",
+      "info"
+    );
+  }
+}
+
+// --- DATA MANAGEMENT (Export/Import/Delete) ---
+function exportData() {
+  try {
+    const dataStr = JSON.stringify(state, null, 2);
+    const dataBlob = new Blob([dataStr], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement("a");
+    const timestamp = new Date()
+      .toISOString()
+      .slice(0, 19)
+      .replace(/[:T]/g, "-");
+    link.download = `kaasi-backup-${timestamp}.json`;
+    link.href = url;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    showNotification("Data exported.", "success");
+  } catch (error) {
+    console.error("Export failed:", error);
+    showNotification("Data export failed.", "error");
+  }
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (!confirm("Importing data will OVERWRITE ALL current data. Proceed?")) {
+    event.target.value = null;
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const importedData = JSON.parse(e.target.result);
+      if (
+        importedData &&
+        importedData.accounts &&
+        importedData.transactions !== undefined &&
+        importedData.categories &&
+        importedData.creditCard
+      ) {
+        state = deepMerge(getDefaultState(), importedData);
+        ensureDefaultAccounts();
+        ensureDefaultCategories();
+        state.accounts.forEach((acc) => {
+          if (isNaN(acc.balance)) acc.balance = 0;
+        });
+        if (isNaN(state.creditCard.limit)) state.creditCard.limit = 0;
+        saveData();
+        initializeUI(true);
+        showNotification("Data imported. Application refreshed.", "success");
+        closeModal("settingsModal");
+      } else {
+        throw new Error("Invalid data structure.");
+      }
+    } catch (error) {
+      console.error("Import failed:", error);
+      showNotification(`Import failed: ${error.message}`, "error");
+    } finally {
+      event.target.value = null;
+    }
+  };
+  reader.onerror = () => {
+    showNotification("Failed to read file.", "error");
+    event.target.value = null;
+  };
+  reader.readAsText(file);
+}
+
+function initiateDeleteAllData() {
+  $("#initiateDeleteBtn").classList.add("hidden");
+  $("#deleteConfirmationSection").classList.remove("hidden");
+  resetDeleteSlider();
+}
+
+function cancelDeleteAllData() {
+  $("#initiateDeleteBtn").classList.remove("hidden");
+  $("#deleteConfirmationSection").classList.add("hidden");
+  resetDeleteSlider();
+}
+let maxTranslateX = 0;
+let isDragging = false; // Slider globals
+function setupDeleteSlider() {
+  const sliderContainer = $("#deleteSliderContainer");
+  const handle = $("#deleteSliderHandle");
+  const track = sliderContainer.querySelector(".slide-to-confirm-track");
+  if (!sliderContainer || !handle || !track) return;
+
+  let startX = 0;
+  let currentTranslateX = 0;
+
+  const calculateMaxTranslate = () => {
+    maxTranslateX = sliderContainer.offsetWidth - handle.offsetWidth - 4; // 2px for handle's own border/padding on each side if any, adjust as needed
+  };
+
+  window.resetDeleteSlider = () => {
+    isDragging = false;
+    currentTranslateX = 0;
+    handle.style.transition =
+      "transform 0.2s ease-out, background-color 0.2s ease-out";
+    track.style.transition =
+      "width 0.2s ease-out, background-color 0.2s ease-out";
+    handle.style.transform = `translateX(0px)`;
+    track.style.width = `0px`; // Reset track width
+    track.style.backgroundColor = "var(--button-success-bg)"; // Default track color (becomes visible on drag)
+    handle.innerHTML = '<i class="fas fa-arrow-right"></i>';
+    handle.style.backgroundColor = "var(--accent-primary)";
+    handle.style.cursor = "grab";
+    sliderContainer.style.cursor = "pointer";
+  };
+
+  const startDrag = (clientX) => {
+    calculateMaxTranslate(); // Calculate max on drag start, in case of resize
+    isDragging = true;
+    startX = clientX - handle.getBoundingClientRect().left; // Position of mouse relative to handle's left edge
+    handle.style.transition = "none"; // No transition during drag for smoothness
+    track.style.transition = "none";
+    handle.style.cursor = "grabbing";
+    sliderContainer.style.cursor = "grabbing";
+  };
+
+  const drag = (clientX) => {
+    if (!isDragging) return;
+    let newTranslateX =
+      clientX - sliderContainer.getBoundingClientRect().left - startX;
+    currentTranslateX = Math.max(0, Math.min(newTranslateX, maxTranslateX));
+    handle.style.transform = `translateX(${currentTranslateX}px)`;
+    track.style.width = `${currentTranslateX + handle.offsetWidth / 2}px`; // Make track follow handle center
+  };
+
+  const endDrag = () => {
+    if (!isDragging) return;
+    isDragging = false;
+    handle.style.cursor = "grab";
+    sliderContainer.style.cursor = "pointer";
+    // Re-apply transitions for snap back or completion animation
+    handle.style.transition =
+      "transform 0.2s ease-out, background-color 0.2s ease-out";
+    track.style.transition =
+      "width 0.2s ease-out, background-color 0.2s ease-out";
+
+    if (currentTranslateX >= maxTranslateX - 1) {
+      // Allow a tiny margin for completion
+      completeDeletion();
+    } else {
+      resetDeleteSlider(); // Snap back
+    }
+  }; // <<< --- ADDED THIS CLOSING BRACE for endDrag
+
+  // Event Listeners
+  handle.addEventListener("mousedown", (e) => startDrag(e.clientX));
+  document.addEventListener("mousemove", (e) => {
+    if (isDragging) drag(e.clientX);
+  });
+  document.addEventListener("mouseup", endDrag);
+
+  handle.addEventListener(
+    "touchstart",
+    (e) => {
+      e.preventDefault(); // Prevent page scroll
+      startDrag(e.touches[0].clientX);
+    },
+    {
+      passive: false,
+    }
+  );
+  document.addEventListener(
+    "touchmove",
+    (e) => {
+      if (isDragging) {
+        e.preventDefault(); // Prevent page scroll during drag
+        drag(e.touches[0].clientX);
+      }
+    },
+    {
+      passive: false,
+    }
+  );
+  document.addEventListener("touchend", endDrag);
+
+  window.addEventListener("resize", () => {
+    if (
+      $("#deleteConfirmationSection") &&
+      !$("#deleteConfirmationSection").classList.contains("hidden")
+    ) {
+      calculateMaxTranslate(); // Recalculate if the slider is visible
+      resetDeleteSlider(); // And reset its position
+    }
+  });
+} // <<<--- ADDED THIS CLOSING BRACE for setupDeleteSlider
+
+function completeDeletion() {
+  const handle = $("#deleteSliderHandle");
+  const track = $(".slide-to-confirm-track");
+  handle.innerHTML = '<i class="fas fa-check"></i>';
+  handle.style.backgroundColor = "var(--button-success-bg)";
+  track.style.width = "100%";
+  track.style.backgroundColor = "var(--button-success-bg)";
+  handle.style.transform = `translateX(${maxTranslateX}px)`;
+  isDragging = false;
+  handle.style.pointerEvents = "none";
+  setTimeout(() => {
+    localStorage.removeItem(STORAGE_KEY);
+    state = getDefaultState();
+    ensureDefaultAccounts();
+    ensureDefaultCategories();
+    initializeUI(true);
+    closeModal("settingsModal");
+    showNotification("All data deleted.", "success");
+    handle.style.pointerEvents = "auto";
+  }, 500);
+}
+
+// --- CASH COUNTER LOGIC ---
+function openCashCounter() {
+  const form = $("#cashCounterForm");
+  const denominations = [5000, 1000, 500, 100, 50, 20, 10, 5, 2, 1];
+  const gridContainer = form.querySelector(".grid");
+  while (gridContainer.children.length > 3)
+    gridContainer.removeChild(gridContainer.lastChild);
+  denominations.forEach((denom) => {
+    const denomEl = document.createElement("span");
+    denomEl.className = "font-medium text-right pr-2 text-sm";
+    denomEl.textContent = `Rs. ${denom}`;
+    const inputEl = document.createElement("input");
+    inputEl.type = "number";
+    inputEl.min = "0";
+    inputEl.dataset.denom = denom;
+    inputEl.className =
+      "text-center bg-gray-600 border border-gray-500 rounded px-1 py-0.5 w-16 mx-auto text-sm";
+    inputEl.placeholder = "0";
+    inputEl.oninput = calculateCashTotal;
+    const totalEl = document.createElement("span");
+    totalEl.className = "text-right text-gray-400 text-sm";
+    totalEl.id = `cashTotal-${denom}`;
+    totalEl.textContent = formatCurrency(0);
+    gridContainer.appendChild(denomEl);
+    gridContainer.appendChild(inputEl);
+    gridContainer.appendChild(totalEl);
+  });
+  calculateCashTotal();
+  $("#cashCounterModal").style.display = "block";
+  $("#cashCounterComparison").innerHTML = "";
+}
+
+function calculateCashTotal() {
+  let grandTotal = 0;
+  $$('#cashCounterForm input[type="number"]').forEach((input) => {
+    const count = parseInt(input.value) || 0;
+    const denomination = parseInt(input.dataset.denom);
+    const total = count * denomination;
+    grandTotal += total;
+    const totalEl = $(`#cashTotal-${denomination}`);
+    if (totalEl) totalEl.textContent = formatCurrency(total);
+  });
+  $("#cashCounterTotal").textContent = formatCurrency(grandTotal);
+  const cashAccount = state.accounts.find((acc) => acc.id === "cash");
+  if (cashAccount) {
+    const diff = grandTotal - cashAccount.balance;
+    const comparisonEl = $("#cashCounterComparison");
+    if (Math.abs(diff) < 0.01)
+      comparisonEl.innerHTML = `<p class="text-success">Counted cash matches calculated balance: ${formatCurrency(
+        cashAccount.balance
+      )}</p>`;
+    else if (diff > 0)
+      comparisonEl.innerHTML = `<p class="text-warning">Counted cash is ${formatCurrency(
+        diff
+      )} MORE than calculated balance (${formatCurrency(
+        cashAccount.balance
+      )})</p>`;
+    else
+      comparisonEl.innerHTML = `<p class="text-danger">Counted cash is ${formatCurrency(
+        Math.abs(diff)
+      )} LESS than calculated balance (${formatCurrency(
+        cashAccount.balance
+      )})</p>`;
+  }
+}
+
+// --- MODAL HANDLING ---
+function closeModal(modalId) {
+  const modal = $(`#${modalId}`);
+  if (modal) modal.style.display = "none";
+  if (modalId === "formModal") {
+    $("#dynamicForm").innerHTML = "";
+    $("#dynamicForm").onsubmit = null;
+  }
+  if (modalId === "settingsModal") cancelDeleteAllData();
+}
+
+function openFormModal(title, formHtml, submitHandler) {
+  $("#formModalTitle").textContent = title;
+  const form = $("#dynamicForm");
+  form.innerHTML = formHtml;
+  form.onsubmit = submitHandler;
+  $("#formModal").style.display = "block";
+  const firstInput = form.querySelector(
+    'input:not([type="hidden"]), select, textarea'
+  );
+  if (firstInput) firstInput.focus();
+}
+window.addEventListener("click", (event) => {
+  $$(".modal").forEach((modal) => {
+    if (event.target === modal) closeModal(modal.id);
+  });
+});
+
+// --- EDIT FORM POPULATION (Wrapper functions that call modal openers) ---
+function openEditTransactionForm(id, event) {
+  openEditTransactionModal(id, event);
+}
+
+function openEditCcTransactionForm(id) {
+  openEditCcTransactionModal(id);
+}
+
+// --- BACKUP REMINDER LOGIC ---
+
+/**
+ * Handles the dismissal of the backup reminder.
+ * Stores the current date for the given reminder key in localStorage.
+ * @param {string} reminderKey - The localStorage key (e.g., 'lastReminderShownForSunday').
+ */
+function handleBackupReminderDismiss(reminderKey) {
+  try {
+    localStorage.setItem(reminderKey, getCurrentDateString());
+    console.log(
+      `Backup reminder dismissed for key: ${reminderKey} on ${getCurrentDateString()}`
+    );
+  } catch (e) {
+    console.error("Error saving backup reminder dismissal state:", e);
+  }
+  closeModal("formModal"); // Reuses the formModal for the reminder
+}
+
+/**
+ * Shows the backup reminder pop-up using the existing formModal structure.
+ * Includes "Backup Now" and "I'll Do It Later" buttons.
+ * @param {string} reminderKey - The localStorage key to update upon dismissal.
+ */
+function showBackupReminderPopup(reminderKey) {
+  const title = "Backup Reminder";
+  const message =
+    "Friendly Reminder! It's a good day to consider backing up your expense data to keep it safe.";
+
+  const formHtml = `
             <div class="text-center">
                 <i class="fas fa-cloud-download-alt fa-3x text-info mb-4"></i>
-                <p class="mb-6 text-gray-300">Friendly Reminder! It's a good day to consider backing up your expense data to keep it safe.</p>
+                <p class="mb-6 text-gray-300">${message}</p>
                 <div class="flex flex-col sm:flex-row justify-center gap-3">
                     <button type="button" id="backupNowBtnInModal" class="btn btn-primary flex-1">
                         <i class="fas fa-download mr-2"></i>Backup Now
@@ -257,4 +4480,348 @@ Warning: This will also remove the associated CC transaction record.`),confirm(a
                     </button>
                 </div>
             </div>
-        `;openFormModal("Backup Reminder",t,null);let a=$("#backupNowBtnInModal"),n=$("#backupLaterBtnInModal");a&&(a.onclick=()=>{exportData(),handleBackupReminderDismiss(e)}),n&&(n.onclick=()=>{handleBackupReminderDismiss(e)})}function checkAndTriggerBackupReminder(){if(!state.settings.initialSetupDone&&0===state.transactions.length){console.log("Skipping backup reminder: Initial setup not done or no transactions.");return}let e=new Date,t=e.getDay(),a=getCurrentDateString(),n=null;if(0===t?n="lastReminderShownForSunday":3===t&&(n="lastReminderShownForWednesday"),n)try{let o=localStorage.getItem(n);o!==a?(console.log(`Time to show backup reminder for: ${n}. Last shown: ${o}, Current: ${a}`),showBackupReminderPopup(n)):console.log(`Backup reminder already shown for ${n} on ${a}`)}catch(i){console.error("Error checking backup reminder state from localStorage:",i)}}window.addEventListener("click",e=>{$$(".modal").forEach(t=>{e.target===t&&closeModal(t.id)})});let activeSettingsTab=null;const settingsTabsConfig=[{label:"Accounts",targetPanelId:"settingsAccountsPanel"},{label:"Credit Card",targetPanelId:"settingsCreditCardPanel"},{label:"Categories",targetPanelId:"settingsCategoriesPanel"},{label:"Data",targetPanelId:"settingsDataManagementPanel"}];function setupSettingsTabs(){let e=document.getElementById("settingsTabsContainer"),t=document.getElementById("settingsTabContent");if(!e||!t){console.error("Settings tab containers not found!");return}e.innerHTML="",activeSettingsTab=null,settingsTabsConfig.forEach((t,a)=>{let n=document.createElement("li"),o=document.createElement("button");if(o.className="settings-tab-button inline-block p-3 border-b-2 rounded-t-lg",o.textContent=t.label,o.dataset.tabTarget=`#${t.targetPanelId}`,o.addEventListener("click",()=>{switchSettingsTab(o,t.targetPanelId)}),n.appendChild(o),e.appendChild(n),0===a)switchSettingsTab(o,t.targetPanelId);else{let i=document.getElementById(t.targetPanelId);i&&i.classList.add("hidden")}})}function switchSettingsTab(e,t){let a=document.getElementById("settingsTabContent");if(!a)return;if(activeSettingsTab&&activeSettingsTab.button!==e){activeSettingsTab.button.classList.remove("active");let n=activeSettingsTab.button.dataset.tabTarget;if(n){let o=a.querySelector(n);o&&o.classList.add("hidden")}}e.classList.add("active");let i=document.getElementById(t);i?i.classList.remove("hidden"):console.warn(`Target panel with ID '${t}' not found.`),activeSettingsTab={button:e,panelId:t}}function initializeUI(e=!1){if(console.log("Initializing UI..."),e||loadData(),(!state.settings||void 0===state.settings.initialSetupDone||!1===state.settings.initialSetupDone)&&!e){console.log("Initial setup not done. Opening wizard."),openInitialSetupWizard();return}let t=$("#date");t&&(t.value=new Date().toISOString().split("T")[0]);let a=$("#ccDate");a&&(a.value=new Date().toISOString().split("T")[0]),populateDropdowns(),renderDashboard(),updateCcDashboardSectionVisibility(),setupMonthlyView(),window.deleteSliderInitialized||(setupDeleteSlider(),window.deleteSliderInitialized=!0),displayAppVersion(),$("#transactionForm").onsubmit=handleTransactionSubmit,$("#ccTransactionForm").onsubmit=handleCcTransactionSubmit,$("#transferForm").onsubmit=handleTransferSubmit,$("#settingsBtn").onclick=()=>{openSettingsModal()},$("#monthlyViewBtn").onclick=()=>{let e=$("#yearSelector");e&&e.value?renderMonthTabs(parseInt(e.value)):renderMonthTabs(new Date().getFullYear()),$("#monthlyViewModal").style.display="block";let t=new Date().getMonth(),a=e?parseInt(e.value):new Date().getFullYear(),n=$(`#monthTabs .tab-button[data-month="${t}"][data-year="${a}"]`);n?n.click():$$("#monthTabs .tab-button").length>0?$$("#monthTabs .tab-button")[0].click():$("#monthlyDetailsContainer").innerHTML='<p class="text-center text-gray-400">Select a month.</p>'},$("#exportDataBtn").onclick=exportData,$("#importDataInput").onchange=importData,$("#initiateDeleteBtn").onclick=initiateDeleteAllData,$("#cancelDeleteBtn").onclick=cancelDeleteAllData,$("#addDebtBtn").onclick=openAddDebtForm,$("#addReceivableBtn").onclick=openAddReceivableForm,$("#addInstallmentBtn").onclick=openAddInstallmentForm,$("#cashCounterBtn").onclick=openCashCounter,$("#ccHistoryBtn").onclick=openCcHistoryModal;let n=$("#transactionType"),o=$("#categoryGroup"),i=$("#description"),r=()=>{n&&o&&("income"===n.value?(o.style.display="none",$("#category").required=!1,i&&(i.placeholder="e.g., Monthly Salary")):(o.style.display="block",$("#category").required=!0,i&&(i.placeholder="e.g., Lunch, Groceries")))};n&&(n.onchange=r,r()),renderDebtList(),renderInstallmentList(),window.countdownInterval||(window.countdownInterval=setInterval(()=>{renderDebtList(),renderInstallmentList()},36e5)),window.backupReminderInterval||(checkAndTriggerBackupReminder(),window.backupReminderInterval=setInterval(checkAndTriggerBackupReminder,36e5),console.log("Backup reminder interval started."))}document.addEventListener("DOMContentLoaded",()=>{console.log("DOM Loaded. Initializing..."),loadData(),initializeUI();let e=document.getElementById("preloader"),t=document.getElementById("app-content");e&&t?(console.log("Preloader will be shown for 1.25 seconds."),setTimeout(()=>{console.log("Preloader timer finished. Hiding preloader, showing app content."),e.classList.add("hidden"),t.classList.add("visible"),setTimeout(()=>{e.style.display="none",console.log("Preloader display set to 'none' after fade-out.")},750)},1250)):(e||console.error("Preloader element with ID 'preloader' not found. Timer preloader cannot run."),t||console.error("App content element with ID 'app-content' not found. Timer preloader cannot run."),t&&(t.classList.add("visible"),console.warn("Attempted to show app content due to missing preloader elements.")),e&&(e.style.display="none"))});
+        `;
+
+  openFormModal(title, formHtml, null);
+
+  const backupNowButton = $("#backupNowBtnInModal");
+  const backupLaterButton = $("#backupLaterBtnInModal");
+
+  if (backupNowButton) {
+    backupNowButton.onclick = () => {
+      exportData();
+      handleBackupReminderDismiss(reminderKey);
+    };
+  }
+
+  if (backupLaterButton) {
+    backupLaterButton.onclick = () => {
+      handleBackupReminderDismiss(reminderKey);
+    };
+  }
+}
+
+/**
+ * Checks if a backup reminder should be shown and triggers it.
+ * This function is intended to be called periodically.
+ */
+function checkAndTriggerBackupReminder() {
+  // --- ADD THIS CHECK AT THE BEGINNING ---
+  // If initial setup isn't done (meaning no initial balances set, likely no data)
+  // OR if there are absolutely no transactions, don't show the backup reminder.
+  if (!state.settings.initialSetupDone && state.transactions.length === 0) {
+    console.log(
+      "Skipping backup reminder: Initial setup not done or no transactions."
+    );
+    return;
+  }
+  // --- END OF ADDED CHECK ---
+
+  const today = new Date();
+  const dayOfWeek = today.getDay(); // 0 for Sunday, 3 for Wednesday
+  const currentDateStr = getCurrentDateString();
+
+  let reminderKey = null;
+
+  if (dayOfWeek === 0) {
+    // Sunday
+    reminderKey = "lastReminderShownForSunday";
+  } else if (dayOfWeek === 3) {
+    // Wednesday
+    reminderKey = "lastReminderShownForWednesday";
+  }
+
+  if (reminderKey) {
+    try {
+      const lastShownDate = localStorage.getItem(reminderKey);
+      if (lastShownDate !== currentDateStr) {
+        console.log(
+          `Time to show backup reminder for: ${reminderKey}. Last shown: ${lastShownDate}, Current: ${currentDateStr}`
+        );
+        showBackupReminderPopup(reminderKey);
+      } else {
+        console.log(
+          `Backup reminder already shown for ${reminderKey} on ${currentDateStr}`
+        );
+      }
+    } catch (e) {
+      console.error(
+        "Error checking backup reminder state from localStorage:",
+        e
+      );
+    }
+  }
+}
+
+let activeSettingsTab = null; // To keep track of the active tab button
+
+const settingsTabsConfig = [
+  { label: "Accounts", targetPanelId: "settingsAccountsPanel" },
+  { label: "Credit Card", targetPanelId: "settingsCreditCardPanel" },
+  { label: "Categories", targetPanelId: "settingsCategoriesPanel" },
+  { label: "Data", targetPanelId: "settingsDataManagementPanel" }, // "Danger Zone" is now inside this panel
+  // "About" and "Danger Zone" are no longer separate tabs in this configuration
+];
+
+/**
+ * Sets up the tab navigation and functionality for the Settings modal.
+ */
+function setupSettingsTabs() {
+  const tabsContainer = document.getElementById("settingsTabsContainer");
+  const tabContentContainer = document.getElementById("settingsTabContent");
+
+  if (!tabsContainer || !tabContentContainer) {
+    console.error("Settings tab containers not found!");
+    return;
+  }
+
+  tabsContainer.innerHTML = ""; // Clear any existing tabs
+  activeSettingsTab = null; // Reset active tab state
+
+  settingsTabsConfig.forEach((tabConfig, index) => {
+    const li = document.createElement("li");
+    // Tailwind's justify-center on the ul will handle centering.
+    // Individual li elements don't need margin if gap is used on ul or flex properties.
+    // If you need specific spacing between tabs, it's better to add it to the <li> or via gap on <ul>.
+
+    const button = document.createElement("button");
+    button.className =
+      "settings-tab-button inline-block p-3 border-b-2 rounded-t-lg"; // Base classes from your CSS
+    button.textContent = tabConfig.label;
+    button.dataset.tabTarget = `#${tabConfig.targetPanelId}`;
+
+    button.addEventListener("click", () => {
+      switchSettingsTab(button, tabConfig.targetPanelId);
+    });
+
+    li.appendChild(button);
+    tabsContainer.appendChild(li);
+
+    // Set the first tab as active by default when the modal is opened
+    if (index === 0) {
+      // Call switchSettingsTab directly here to ensure the first panel is shown
+      // and the button is marked active when setupSettingsTabs is first called.
+      switchSettingsTab(button, tabConfig.targetPanelId);
+    } else {
+      // Ensure other panels are hidden initially
+      const panel = document.getElementById(tabConfig.targetPanelId);
+      if (panel) {
+        panel.classList.add("hidden");
+      }
+    }
+  });
+}
+
+/**
+ * Handles switching between tabs in the Settings modal.
+ * @param {HTMLElement} clickedButton - The tab button that was clicked.
+ * @param {string} targetPanelId - The ID of the content panel to show.
+ */
+function switchSettingsTab(clickedButton, targetPanelId) {
+  const tabContentContainer = document.getElementById("settingsTabContent");
+  if (!tabContentContainer) return;
+
+  // Deactivate previously active tab and hide its panel
+  if (activeSettingsTab && activeSettingsTab.button !== clickedButton) {
+    activeSettingsTab.button.classList.remove("active");
+    // Ensure the target selector is correct (includes #)
+    const oldPanelSelector = activeSettingsTab.button.dataset.tabTarget;
+    if (oldPanelSelector) {
+      const oldPanel = tabContentContainer.querySelector(oldPanelSelector); // Use querySelector on the container
+      if (oldPanel) {
+        oldPanel.classList.add("hidden");
+      }
+    }
+  }
+
+  // Activate new tab and show its panel
+  clickedButton.classList.add("active");
+  const targetPanel = document.getElementById(targetPanelId); // Direct ID selection for the panel to show
+  if (targetPanel) {
+    targetPanel.classList.remove("hidden");
+  } else {
+    console.warn(`Target panel with ID '${targetPanelId}' not found.`);
+  }
+
+  activeSettingsTab = { button: clickedButton, panelId: targetPanelId };
+}
+
+// --- INITIALIZATION ---
+function initializeUI(isRefresh = false) {
+  console.log("Initializing UI...");
+
+  if (!isRefresh) {
+    loadData(); // Populates 'state' from localStorage or defaults
+  }
+
+  if (
+    !state.settings ||
+    state.settings.initialSetupDone === undefined ||
+    state.settings.initialSetupDone === false
+  ) {
+    if (!isRefresh) {
+      console.log("Initial setup not done. Opening wizard.");
+      openInitialSetupWizard();
+      return;
+    }
+  }
+
+  const mainDateInput = $("#date");
+  if (mainDateInput)
+    mainDateInput.value = new Date().toISOString().split("T")[0];
+  const mainCcDateInput = $("#ccDate");
+  if (mainCcDateInput)
+    mainCcDateInput.value = new Date().toISOString().split("T")[0];
+
+  populateDropdowns();
+  renderDashboard();
+  updateCcDashboardSectionVisibility();
+  setupMonthlyView();
+  if (!window.deleteSliderInitialized) {
+    setupDeleteSlider();
+    window.deleteSliderInitialized = true;
+  }
+
+  displayAppVersion();
+
+  $("#transactionForm").onsubmit = handleTransactionSubmit;
+  $("#ccTransactionForm").onsubmit = handleCcTransactionSubmit;
+  $("#transferForm").onsubmit = handleTransferSubmit;
+
+  $("#settingsBtn").onclick = () => {
+    openSettingsModal();
+  };
+  $("#monthlyViewBtn").onclick = () => {
+    const yearSelector = $("#yearSelector");
+    if (yearSelector && yearSelector.value) {
+      renderMonthTabs(parseInt(yearSelector.value));
+    } else {
+      renderMonthTabs(new Date().getFullYear());
+    }
+    $("#monthlyViewModal").style.display = "block";
+    const currentMonth = new Date().getMonth();
+    const currentYearVal = yearSelector
+      ? parseInt(yearSelector.value)
+      : new Date().getFullYear();
+    const currentMonthTab = $(
+      `#monthTabs .tab-button[data-month="${currentMonth}"][data-year="${currentYearVal}"]`
+    );
+    if (currentMonthTab) {
+      currentMonthTab.click();
+    } else if ($$("#monthTabs .tab-button").length > 0) {
+      $$("#monthTabs .tab-button")[0].click();
+    } else {
+      $("#monthlyDetailsContainer").innerHTML =
+        '<p class="text-center text-gray-400">Select a month.</p>';
+    }
+  };
+  $("#exportDataBtn").onclick = exportData;
+  $("#importDataInput").onchange = importData;
+  $("#initiateDeleteBtn").onclick = initiateDeleteAllData;
+  $("#cancelDeleteBtn").onclick = cancelDeleteAllData;
+  $("#addDebtBtn").onclick = openAddDebtForm;
+  $("#addReceivableBtn").onclick = openAddReceivableForm;
+  $("#addInstallmentBtn").onclick = openAddInstallmentForm;
+  $("#cashCounterBtn").onclick = openCashCounter;
+  $("#ccHistoryBtn").onclick = openCcHistoryModal;
+
+  const transactionTypeSelect = $("#transactionType");
+  const categoryGroup = $("#categoryGroup");
+  const descriptionInput = $("#description");
+  const toggleMainCategoryVisibility = () => {
+    if (!transactionTypeSelect || !categoryGroup) return;
+    if (transactionTypeSelect.value === "income") {
+      categoryGroup.style.display = "none";
+      $("#category").required = false;
+      if (descriptionInput)
+        descriptionInput.placeholder = "e.g., Monthly Salary";
+    } else {
+      categoryGroup.style.display = "block";
+      $("#category").required = true;
+      if (descriptionInput)
+        descriptionInput.placeholder = "e.g., Lunch, Groceries";
+    }
+  };
+  if (transactionTypeSelect) {
+    transactionTypeSelect.onchange = toggleMainCategoryVisibility;
+    toggleMainCategoryVisibility();
+  }
+
+  renderDebtList();
+  renderInstallmentList();
+
+  if (!window.countdownInterval) {
+    window.countdownInterval = setInterval(() => {
+      renderDebtList();
+      renderInstallmentList();
+    }, 1000 * 60 * 60);
+  }
+
+  if (!window.backupReminderInterval) {
+    checkAndTriggerBackupReminder();
+    window.backupReminderInterval = setInterval(
+      checkAndTriggerBackupReminder,
+      1000 * 60 * 60
+    );
+    console.log("Backup reminder interval started.");
+  }
+}
+
+// --- STARTUP ---
+document.addEventListener("DOMContentLoaded", () => {
+  console.log("DOM Loaded. Initializing...");
+  loadData();
+  initializeUI();
+  const preloaderElement = document.getElementById("preloader");
+  const appContentElement = document.getElementById("app-content");
+  const preloaderDuration = 1250; // 1.25 seconds
+
+  if (preloaderElement && appContentElement) {
+    console.log(
+      `Preloader will be shown for ${preloaderDuration / 1000} seconds.`
+    );
+
+    // This timeout will hide the preloader and show the main content
+    setTimeout(() => {
+      console.log(
+        "Preloader timer finished. Hiding preloader, showing app content."
+      );
+
+      // Start fading out preloader by adding the 'hidden' class (defined in CSS)
+      preloaderElement.classList.add("hidden");
+
+      // Start fading in app content by adding the 'visible' class (defined in CSS)
+      appContentElement.classList.add("visible");
+
+      // After the preloader's fade-out transition (0.75s as per CSS),
+      // set its display to 'none' so it doesn't take up space or interfere.
+      // The transition duration for #preloader opacity is 0.75s (750ms).
+      setTimeout(() => {
+        preloaderElement.style.display = "none";
+        console.log("Preloader display set to 'none' after fade-out.");
+      }, 750); // This duration MUST match the CSS transition-duration for #preloader
+    }, preloaderDuration);
+  } else {
+    // Fallback if essential elements are missing, to prevent a blank page
+    if (!preloaderElement) {
+      console.error(
+        "Preloader element with ID 'preloader' not found. Timer preloader cannot run."
+      );
+    }
+    if (!appContentElement) {
+      console.error(
+        "App content element with ID 'app-content' not found. Timer preloader cannot run."
+      );
+    }
+    // Attempt to make the app content visible anyway if the preloader structure is broken
+    if (appContentElement) {
+      appContentElement.classList.add("visible"); // Show app content
+      console.warn(
+        "Attempted to show app content due to missing preloader elements."
+      );
+    }
+    if (preloaderElement) {
+      preloaderElement.style.display = "none"; // Hide preloader immediately
+    }
+  }
+});
