@@ -1,4 +1,3 @@
-// --- UTILITIES ---
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => document.querySelectorAll(selector);
 const formatCurrency = (amount) => {
@@ -17,7 +16,7 @@ const getDaysLeft = (dueDate) => {
 function getCurrentDateString() {
   const today = new Date();
   const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, "0"); // Months are 0-indexed
+  const month = String(today.getMonth() + 1).padStart(2, "0");
   const day = String(today.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
@@ -28,9 +27,7 @@ function getFormattedLocalStorageSize(key) {
     return "N/A (No data found)";
   }
 
-  // The length of the string is a good approximation of bytes for UTF-16 encoded strings (JavaScript default)
-  // For Base64 encoded data (like our compressed data), the length of the Base64 string is a good proxy.
-  const sizeInBytes = item.length; // For strings, length is roughly bytes
+  const sizeInBytes = item.length; 
 
   if (sizeInBytes < 1024) {
     return `${sizeInBytes} Bytes`;
@@ -41,12 +38,8 @@ function getFormattedLocalStorageSize(key) {
   }
 }
 
-/**
- * Reads the application version from the meta tag and displays it
- * in the designated elements within the Settings and Initial Setup modals.
- */
 function displayAppVersion() {
-  let version = "N/A"; // Default version if meta tag is not found
+  let version = "N/A";
   try {
     const versionMetaTag = document.querySelector(
       'meta[name="application-version"]'
@@ -71,7 +64,6 @@ function displayAppVersion() {
   }
 }
 
-// NEW UTILITY for modal category visibility
 function toggleCategoryVisibilityInModal(
   selectElement,
   categoryGroupId,
@@ -79,7 +71,7 @@ function toggleCategoryVisibilityInModal(
 ) {
   const categoryGroup = document.getElementById(categoryGroupId);
   const categorySelect = document.getElementById(categorySelectId);
-  // Attempt to find the description input by common names used in modals
+
   const descriptionInput =
     selectElement.form.elements["description"] ||
     selectElement.form.elements["modalDescription"] ||
@@ -91,7 +83,7 @@ function toggleCategoryVisibilityInModal(
     if (categorySelect) categorySelect.required = false;
     if (descriptionInput) descriptionInput.placeholder = "e.g., Monthly Salary";
   } else {
-    // 'expense'
+
     if (categoryGroup) categoryGroup.style.display = "block";
     if (categorySelect) categorySelect.required = true;
     if (descriptionInput)
@@ -99,7 +91,6 @@ function toggleCategoryVisibilityInModal(
   }
 }
 
-// --- INITIAL STATE & DEFAULTS ---
 let state = {};
 
 function getDefaultState() {
@@ -108,28 +99,28 @@ function getDefaultState() {
       transactions: [],
       accounts: [
         {
-          id: "cash", // Cash ID remains the same
+          id: "cash", 
           name: "Cash",
           balance: 0,
         },
         {
-          id: "bank_1", // Generic ID
-          name: "Commercial", // Default display name
+          id: "bank_1", 
+          name: "Commercial", 
           balance: 0,
         },
         {
-          id: "bank_2", // Generic ID
-          name: "HNB", // Default display name
+          id: "bank_2", 
+          name: "HNB", 
           balance: 0,
         },
         {
-          id: "bank_3", // Generic ID
-          name: "Genie", // Default display name
+          id: "bank_3", 
+          name: "Genie", 
           balance: 0,
         },
       ],
       categories: [
-        // User's preferred list
+
         "Food & Dining",
         "Groceries",
         "Transportation",
@@ -160,9 +151,6 @@ function getDefaultState() {
   );
 }
 
-// --- INITIAL SETUP WIZARD LOGIC ---
-
-// Function to open and populate the initial setup wizard
 function openInitialSetupWizard() {
   const modal = $("#initialSetupModal");
   if (!modal) {
@@ -238,11 +226,11 @@ function openInitialSetupWizard() {
       .sort((a, b) => a.localeCompare(b))
       .forEach((cat) => {
         const div = document.createElement("div");
-        // MODIFIED: Removed bg-gray-600/50, added inline style for var(--bg-secondary)
+
         div.className = "flex justify-between items-center p-2 rounded text-sm";
         div.style.backgroundColor = "var(--bg-secondary)";
-        div.style.borderColor = "var(--border-color)"; // Optional: ensure border consistency
-        div.style.borderWidth = "1px"; // Optional: ensure border consistency
+        div.style.borderColor = "var(--border-color)"; 
+        div.style.borderWidth = "1px"; 
 
         div.innerHTML = `
               <span>${cat}</span>
@@ -287,7 +275,7 @@ function openInitialSetupWizard() {
       }
     };
   }
-  renderSetupCategories(); // Initial call
+  renderSetupCategories(); 
 
   $("#initialSetupForm").onsubmit = handleInitialSetupSubmit;
   $("#setupImportInput").onchange = handleSetupImport;
@@ -296,37 +284,34 @@ function openInitialSetupWizard() {
   displayAppVersion();
 }
 
-// Function to handle the submission of the manual setup form
 function handleInitialSetupSubmit(event) {
   event.preventDefault();
   console.log("Handling initial setup form submission...");
 
-  let newState = getDefaultState(); // Start with a fresh default state structure
+  let newState = getDefaultState(); 
 
-  // 1. Update Account Names and Balances
-  // Iterate based on the structure of defaultAccounts to ensure order and all defaults are considered
   const defaultAccountsFromTemplate = getDefaultState().accounts;
 
   newState.accounts = defaultAccountsFromTemplate.map((defaultAcc) => {
-    const nameInput = $(`#setupName-${defaultAcc.id}`); // For editable names
+    const nameInput = $(`#setupName-${defaultAcc.id}`); 
     const balanceInput = $(`#setupBalance-${defaultAcc.id}`);
 
-    let finalName = defaultAcc.name; // Default to original name
+    let finalName = defaultAcc.name; 
     if (defaultAcc.id !== "cash" && nameInput) {
-      // If it's an editable account and the input exists
+
       const enteredName = nameInput.value.trim();
       if (enteredName) {
-        // If user provided a name
+
         finalName = enteredName;
       } else {
         console.warn(
           `Account name for ${defaultAcc.id} was left empty, using default: ${defaultAcc.name}`
         );
-        // Keep finalName as defaultAcc.name
+
       }
     }
 
-    let balance = 0; // Default balance to 0
+    let balance = 0; 
     if (balanceInput) {
       const balanceStr = balanceInput.value.trim();
       if (balanceStr !== "" && balanceStr !== null) {
@@ -334,13 +319,12 @@ function handleInitialSetupSubmit(event) {
         balance = isNaN(parsedBalance) ? 0 : parsedBalance;
       }
     }
-    // Return a new object for the account, preserving its original ID
+
     return { id: defaultAcc.id, name: finalName, balance: balance };
   });
 
-  // 2. Update Credit Card Settings
   const ccEnabled = $("#setupEnableCc").checked;
-  newState.settings.showCcDashboardSection = ccEnabled; // This should already be part of newState.settings from getDefaultState()
+  newState.settings.showCcDashboardSection = ccEnabled; 
   if (ccEnabled) {
     const ccLimitStr = $("#setupCcLimit").value.trim();
     if (ccLimitStr === "" || ccLimitStr === null) {
@@ -353,7 +337,6 @@ function handleInitialSetupSubmit(event) {
     newState.creditCard.limit = 0;
   }
 
-  // 3. Update Categories
   const finalCategories = [];
   $$("#setupCategoriesList span").forEach((span) =>
     finalCategories.push(span.textContent)
@@ -363,23 +346,18 @@ function handleInitialSetupSubmit(event) {
       ? finalCategories.sort((a, b) => a.localeCompare(b))
       : getDefaultState().categories;
 
-  // 4. Mark setup as done
   newState.settings.initialSetupDone = true;
 
-  // 5. Replace the global state with the new state from setup
   state = newState;
 
-  // 6. Save data
   saveData();
 
-  // 7. Close wizard and initialize main app UI
   closeModal("initialSetupModal");
   initializeUI(true);
 
   showNotification("Setup complete! Welcome to Kaasi.", "success", 5000);
 }
 
-// Function to handle data import from within the setup wizard
 function handleSetupImport(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -425,8 +403,7 @@ function handleSetupImport(event) {
   reader.readAsText(file);
 }
 
-// --- LOCAL STORAGE ---
-const STORAGE_KEY = "KaasiData"; // Reverted to original key
+const STORAGE_KEY = "KaasiData"; 
 
 function saveData() {
   try {
@@ -441,18 +418,15 @@ function saveData() {
         10000
       );
     } else {
-      // This could be a different error, like data being non-serializable
-      // (though less likely if it worked before compression)
+
       showNotification("Error saving data. Check console.", "error", 10000);
     }
-    // It's helpful to log the state if stringify itself is the problem,
-    // but QuotaExceededError happens after stringify.
-    // console.error("Full state object that potentially failed to save:", state);
+
   }
 }
 
 function loadData() {
-  const d = localStorage.getItem(STORAGE_KEY); // Try loading uncompressed data
+  const d = localStorage.getItem(STORAGE_KEY); 
   let parsedData = null;
 
   if (d) {
@@ -461,7 +435,7 @@ function loadData() {
       parsedData = JSON.parse(d);
     } catch (e) {
       console.error("Error parsing data from localStorage:", e);
-      // ParsedData will remain null, leading to fresh state initialization
+
       showNotification(
         "Error loading data. Data might be corrupted. Starting fresh.",
         "error",
@@ -470,45 +444,35 @@ function loadData() {
     }
   }
 
-  // Start with a fresh default state structure.
-  // This ensures that 'state' always has the correct top-level keys.
   state = getDefaultState();
 
-  // If parsedData exists and is an object, merge it into the fresh default state
   if (parsedData && typeof parsedData === "object") {
     console.log("Merging loaded data into default state structure...");
-    // Use the corrected deepMerge. 'state' (which is a fresh default) is the target.
-    // 'parsedData' (loaded data) is the source.
-    // This will recursively add/update properties from parsedData into state.
+
     state = deepMerge(state, parsedData);
     console.log("Data merged successfully.");
   } else if (d && !parsedData) {
-    // Data existed but failed to parse
+
     console.log(
       "Previous data existed but was unparsable. Using fresh default state."
     );
-    // state is already getDefaultState() at this point, so no further action needed here.
+
   } else {
     console.log(
       "No saved data found or data was null/invalid. Starting with fresh default state."
     );
-    // state is already getDefaultState().
+
   }
 
-  // After merging or starting fresh, explicitly ensure essential nested objects and their
-  // default properties are correctly initialized if they are still missing or invalid.
-  // This is a safeguard against malformed loaded data or if getDefaultState() was incomplete for nested parts.
+  const defaultStateTemplate = getDefaultState(); 
 
-  const defaultStateTemplate = getDefaultState(); // Get a fresh template for comparison
-
-  // Ensure 'settings' object and its properties exist
   if (!state.settings || typeof state.settings !== "object") {
     console.warn(
       "State.settings was missing or invalid after merge. Resetting to default settings structure."
     );
-    state.settings = { ...defaultStateTemplate.settings }; // Create a new settings object from default
+    state.settings = { ...defaultStateTemplate.settings }; 
   } else {
-    // Ensure all specific default settings properties exist within state.settings
+
     for (const settingKey in defaultStateTemplate.settings) {
       if (state.settings[settingKey] === undefined) {
         state.settings[settingKey] = defaultStateTemplate.settings[settingKey];
@@ -516,40 +480,35 @@ function loadData() {
     }
   }
 
-  // Ensure 'creditCard' object and its properties exist
   if (!state.creditCard || typeof state.creditCard !== "object") {
     console.warn(
       "State.creditCard was missing or invalid after merge. Resetting to default creditCard structure."
     );
-    state.creditCard = { ...defaultStateTemplate.creditCard }; // Create a new creditCard object
+    state.creditCard = { ...defaultStateTemplate.creditCard }; 
     if (!Array.isArray(state.creditCard.transactions)) {
-      // Ensure transactions array is initialized
+
       state.creditCard.transactions = [];
     }
   } else {
-    // Ensure all specific default creditCard properties exist
+
     for (const ccKey in defaultStateTemplate.creditCard) {
       if (state.creditCard[ccKey] === undefined) {
         state.creditCard[ccKey] = defaultStateTemplate.creditCard[ccKey];
       }
     }
     if (!Array.isArray(state.creditCard.transactions)) {
-      // Ensure transactions is an array
+
       state.creditCard.transactions = [];
     }
   }
 
-  // Ensure top-level arrays are at least initialized if they somehow got removed or were not in old data.
-  // Note: getDefaultState() already initializes these, and deepMerge should preserve them if present in source.
-  // This is more of a final sanity check.
   if (!Array.isArray(state.transactions)) state.transactions = [];
-  if (!Array.isArray(state.accounts)) state.accounts = []; // ensureDefaultAccounts will handle content
-  if (!Array.isArray(state.categories)) state.categories = []; // ensureDefaultCategories will handle content
+  if (!Array.isArray(state.accounts)) state.accounts = []; 
+  if (!Array.isArray(state.categories)) state.categories = []; 
   if (!Array.isArray(state.debts)) state.debts = [];
   if (!Array.isArray(state.receivables)) state.receivables = [];
   if (!Array.isArray(state.installments)) state.installments = [];
 
-  // Existing data integrity checks (important to keep)
   ensureDefaultAccounts();
   ensureDefaultCategories();
 
@@ -594,7 +553,7 @@ function loadData() {
 }
 
 function deepMerge(target, source) {
-  // Iterate over the properties of the source object
+
   for (const key in source) {
     if (source.hasOwnProperty(key)) {
       const sourceValue = source[key];
@@ -605,9 +564,7 @@ function deepMerge(target, source) {
         typeof sourceValue === "object" &&
         !Array.isArray(sourceValue)
       ) {
-        // If the source property is an object (and not an array), recurse
-        // Ensure the target property is also an object to merge into;
-        // if not, or if it doesn't exist, initialize it as an empty object.
+
         if (
           !targetValue ||
           typeof targetValue !== "object" ||
@@ -615,48 +572,46 @@ function deepMerge(target, source) {
         ) {
           target[key] = {};
         }
-        deepMerge(target[key], sourceValue); // Merge into the target's object property
+        deepMerge(target[key], sourceValue); 
       } else if (sourceValue !== undefined) {
-        // If the source property is a primitive, an array, or explicitly undefined (to overwrite),
-        // assign it directly to the target.
+
         target[key] = sourceValue;
       }
-      // If sourceValue is undefined, we don't do anything, preserving targetValue
+
     }
   }
-  // The problematic loop that added all default top-level keys into sub-objects has been removed.
-  return target; // Return the modified target object
+
+  return target; 
 }
 
 function ensureDefaultAccounts() {
-  const defaultAccounts = getDefaultState().accounts; // Get a fresh copy of default accounts
+  const defaultAccounts = getDefaultState().accounts; 
   if (!Array.isArray(state.accounts)) {
-    // If state.accounts is not an array, reset it
+
     console.warn(
       "state.accounts was not an array. Resetting to default accounts structure."
     );
-    state.accounts = JSON.parse(JSON.stringify(defaultAccounts)); // Deep copy
-    // Initialize balances to 0 for all default accounts if resetting
+    state.accounts = JSON.parse(JSON.stringify(defaultAccounts)); 
+
     state.accounts.forEach((acc) => (acc.balance = 0));
     return;
   }
 
-  // Ensure all default accounts exist in the state
   defaultAccounts.forEach((defaultAcc) => {
     const existingAccount = state.accounts.find(
       (acc) => acc.id === defaultAcc.id
     );
     if (!existingAccount) {
-      // If a default account is missing, add it with a balance of 0
+
       console.warn(
         `Default account '${defaultAcc.name}' (ID: ${defaultAcc.id}) was missing. Adding it.`
       );
       state.accounts.push({
-        ...defaultAcc, // Spread default properties like id and name
-        balance: 0, // Initialize balance to 0
+        ...defaultAcc, 
+        balance: 0, 
       });
     } else {
-      // If account exists, ensure essential properties are correct
+
       if (typeof existingAccount.name !== "string")
         existingAccount.name = defaultAcc.name;
       if (
@@ -671,15 +626,11 @@ function ensureDefaultAccounts() {
     }
   });
 
-  // Optional: Remove any accounts in state that are not in the default list
-  // This might be too aggressive if users can create custom accounts.
-  // For now, we'll just ensure default ones are present and valid.
 }
 
 function ensureDefaultCategories() {
-  const defaultCategories = getDefaultState().categories; // Get the app's default list
+  const defaultCategories = getDefaultState().categories; 
 
-  // If state.categories doesn't exist or is not an array, initialize it as an empty array.
   if (!state.categories || !Array.isArray(state.categories)) {
     console.warn(
       "state.categories was missing or not an array. Initializing as empty array."
@@ -687,23 +638,15 @@ function ensureDefaultCategories() {
     state.categories = [];
   }
 
-  // Only populate with default categories if the user's category list is currently empty.
-  // This allows users to delete default categories and not have them reappear,
-  // as long as they have at least one category remaining.
-  // If they delete ALL categories, then the defaults will be restored on next load.
   if (state.categories.length === 0) {
     console.warn(
       "state.categories is empty. Populating with default categories."
     );
-    state.categories = JSON.parse(JSON.stringify(defaultCategories)); // Deep copy defaults
+    state.categories = JSON.parse(JSON.stringify(defaultCategories)); 
   }
-  // Always ensure categories are sorted for consistent display.
+
   state.categories.sort((a, b) => a.localeCompare(b));
 
-  // The "Other" category is special and should always exist.
-  // The deleteCategory function already prevents its deletion.
-  // We can add a check here to ensure it's present if it somehow got removed
-  // and the list wasn't empty (though deleteCategory should prevent this).
   const otherCategory = "Other";
   if (
     !state.categories.some(
@@ -712,11 +655,10 @@ function ensureDefaultCategories() {
   ) {
     console.warn("'Other' category was missing. Adding it back.");
     state.categories.push(otherCategory);
-    state.categories.sort((a, b) => a.localeCompare(b)); // Re-sort
+    state.categories.sort((a, b) => a.localeCompare(b)); 
   }
 }
 
-// --- NOTIFICATIONS ---
 function showNotification(message, type = "success", duration = 4000) {
   const area = $("#notificationArea");
   if (!area) return;
@@ -757,7 +699,6 @@ function showNotification(message, type = "success", duration = 4000) {
   }, duration);
 }
 
-// --- RENDERING FUNCTIONS (Core) ---
 function populateDropdowns() {
   const accountSelects = $$(
     'select[name="account"], select[name="transferFrom"], select[name="transferTo"], select[name="receivableSourceAccount"], select[name="payDebtAccount"], select[name="recPaymentAccount"], select[name="instPayAccount"], select[name="ccPayFromAccount"], #modalAccount, #recSourceAccountAdd, #recSourceAccountEdit, #modalCcPayFromAccount, #modalInstPayAccount, #modalPayDebtAccount'
@@ -769,38 +710,33 @@ function populateDropdowns() {
   accountSelects.forEach((s) => {
     if (!s) return;
     const currentValue = s.value;
-    s.innerHTML = ""; // Clear existing options
+    s.innerHTML = ""; 
     state.accounts.forEach((a) => {
       const o = document.createElement("option");
       o.value = a.id;
       o.textContent = `${a.name} (${formatCurrency(a.balance)})`;
       s.appendChild(o);
     });
-    // Try to reselect the previous value if it still exists
+
     if (Array.from(s.options).some((opt) => opt.value === currentValue)) {
       s.value = currentValue;
     } else if (s.options.length > 0) {
-      // If previous value is gone, and there are options, select the first one
-      // You might want to reconsider this default behavior if a placeholder is preferred for accounts too
-      // s.value = s.options[0].value;
+
     }
   });
 
   const populateCategorySelect = (selectEl) => {
     if (!selectEl) return;
-    const currentValue = selectEl.value; // Store current value before clearing
-    selectEl.innerHTML = ""; // Clear existing options
+    const currentValue = selectEl.value; 
+    selectEl.innerHTML = ""; 
 
-    // Add a disabled, selected placeholder option
     const placeholderOption = document.createElement("option");
-    placeholderOption.value = ""; // Empty value for placeholder
+    placeholderOption.value = ""; 
     placeholderOption.textContent = "---- Select Category ----";
     placeholderOption.disabled = true;
-    // placeholderOption.selected = true; // Set selected by default
+
     selectEl.appendChild(placeholderOption);
 
-    // Filter out "Income" and "Credit Card Payment" for general expense categories,
-    // and separate "Other" to add it at the end.
     const otherCategoryName = "Other";
     let generalCategories = state.categories.filter(
       (c) =>
@@ -809,10 +745,8 @@ function populateDropdowns() {
         c.toLowerCase() !== otherCategoryName.toLowerCase()
     );
 
-    // Sort general categories alphabetically
     generalCategories.sort((a, b) => a.localeCompare(b));
 
-    // Special handling for specific dropdowns like debt repayment
     if (selectEl.id === "modalPayDebtCategory") {
       const debtRepaymentCategory = "Debt Repayment";
       if (
@@ -821,14 +755,10 @@ function populateDropdowns() {
           (c) => c.toLowerCase() === debtRepaymentCategory.toLowerCase()
         )
       ) {
-        // If "Debt Repayment" is not in general and not in original state.categories (meaning user didn't add it)
-        // we might not want to force-add it here unless it's a fixed option.
-        // For now, let's assume if it's not in state.categories, it's not an option.
-        // If "Debt Repayment" should ALWAYS be an option for this dropdown, it needs to be handled differently.
+
       }
     }
 
-    // Add sorted general categories
     generalCategories.forEach((c) => {
       const o = document.createElement("option");
       o.value = c;
@@ -836,7 +766,6 @@ function populateDropdowns() {
       selectEl.appendChild(o);
     });
 
-    // Add "Other" category at the end, if it exists in the state
     if (
       state.categories.some(
         (c) => c.toLowerCase() === otherCategoryName.toLowerCase()
@@ -848,7 +777,6 @@ function populateDropdowns() {
       selectEl.appendChild(otherOption);
     }
 
-    // Try to reselect the previous value if it still exists and is valid
     if (
       currentValue &&
       Array.from(selectEl.options).some(
@@ -860,11 +788,11 @@ function populateDropdowns() {
       selectEl.id === "modalPayDebtCategory" &&
       state.categories.includes("Debt Repayment")
     ) {
-      // Default for debt payment if "Debt Repayment" category exists
+
       selectEl.value = "Debt Repayment";
     } else {
-      // If no valid previous selection, make the placeholder selected
-      selectEl.value = ""; // This will select the placeholder
+
+      selectEl.value = ""; 
     }
   };
 
@@ -960,7 +888,7 @@ function renderYearlyAndQuickStats() {
   )} <span id="weekSpendingIndicator"></span>`;
 
   const todayIndicator = $("#todaySpendingIndicator");
-  // Using new indicator classes for green/red
+
   if (todaySpent > yesterdaySpent && yesterdaySpent >= 0)
     todayIndicator.innerHTML = `<i class="fas fa-arrow-up text-indicator-bad spending-indicator" title="More than yesterday (${formatCurrency(
       yesterdaySpent
@@ -972,7 +900,7 @@ function renderYearlyAndQuickStats() {
   else todayIndicator.innerHTML = "";
 
   const weekIndicator = $("#weekSpendingIndicator");
-  // Using new indicator classes for green/red
+
   if (weeklySpent > lastWeekSpentTotal && lastWeekSpentTotal >= 0)
     weekIndicator.innerHTML = `<i class="fas fa-arrow-up text-indicator-bad spending-indicator" title="More than last week (${formatCurrency(
       lastWeekSpentTotal
@@ -984,7 +912,6 @@ function renderYearlyAndQuickStats() {
   else weekIndicator.innerHTML = "";
 }
 
-// --- RENDERING LISTS & DASHBOARD CHART ---
 function renderRecentTransactions() {
   const list = $("#recentTransactionsList");
   if (!list) return;
@@ -1010,7 +937,7 @@ function renderRecentTransactions() {
     const account = state.accounts.find((a) => a.id === t.account);
     const accountName = account ? account.name : "Unknown";
     const isIncome = t.type === "income";
-    const textColorClass = isIncome ? "text-income" : "text-expense"; // Use new income/expense classes
+    const textColorClass = isIncome ? "text-income" : "text-expense"; 
     const categoryText = !isIncome ? `(${t.category || "Uncategorized"})` : "";
 
     div.innerHTML = `
@@ -1038,16 +965,18 @@ function renderRecentTransactions() {
 }
 
 function renderDebtList() {
-  const listContainer = $("#debtList");
+  const listContainer = $("#debtModalListContainer");
   if (!listContainer) {
-    console.error("#debtList element not found.");
+    console.warn(
+      "#debtModalListContainer element not found. Debts modal might not be open."
+    );
     return;
   }
   listContainer.innerHTML = "";
 
   if (state.debts.length === 0) {
     listContainer.innerHTML =
-      '<p class="text-gray-400 text-sm">No debts recorded.</p>';
+      '<p class="text-gray-400 text-sm text-center py-4">No debts recorded.</p>';
     return;
   }
 
@@ -1070,22 +999,21 @@ function renderDebtList() {
 
   if (sortedCreditors.length === 0) {
     listContainer.innerHTML =
-      '<p class="text-gray-400 text-sm">No debts to display by creditor.</p>';
+      '<p class="text-gray-400 text-sm text-center py-4">No debts to display by creditor.</p>';
     return;
   }
 
   sortedCreditors.forEach((creditorName) => {
     const creditorData = totalsByCreditor[creditorName];
-    const creditorId = `debt-creditor-${generateId()}`;
+    const creditorId = `modal-debt-creditor-${generateId()}`;
 
     const creditorWrapper = document.createElement("div");
     creditorWrapper.className =
-      "mb-3 border border-gray-700 rounded-md overflow-hidden"; // This div takes full width of its column
+      "mb-3 border border-gray-700 rounded-md overflow-hidden shadow-sm";
 
     const creditorHeader = document.createElement("div");
     creditorHeader.className =
-      "flex justify-between items-center p-3 cursor-pointer hover:bg-gray-600/50 transition-colors"; // Adjusted hover
-    // MODIFIED: Changed background color to --bg-tertiary
+      "flex justify-between items-center p-3 cursor-pointer hover:bg-gray-600/50 transition-colors";
     creditorHeader.style.backgroundColor = "var(--bg-tertiary)";
     creditorHeader.onclick = () => {
       const itemsDiv = document.getElementById(creditorId);
@@ -1102,15 +1030,16 @@ function renderDebtList() {
       }
     };
 
-    creditorHeader.innerHTML = `
-          <h4 class="text-md font-semibold text-gray-100">${creditorName}</h4>
-          <div class="flex items-center">
-              <span class="text-md font-semibold text-expense mr-3">${formatCurrency(
-                creditorData.totalOwedTo
-              )}</span>
-              <span class="toggle-icon text-gray-400"><i class="fas fa-chevron-down"></i></span>
-          </div>
-      `;
+    creditorHeader.innerHTML = ` 
+      <h4 class="text-md font-semibold text-gray-100">${creditorName}</h4>
+      <div class="flex items-center">
+        <span class="text-md font-semibold text-expense mr-3">${formatCurrency(
+          creditorData.totalOwedTo
+        )}</span>
+        <span class="toggle-icon text-gray-400"><i class="fas fa-chevron-down"></i></span>
+      </div>
+    `;
+
     creditorWrapper.appendChild(creditorHeader);
 
     const itemsListContainer = document.createElement("div");
@@ -1138,30 +1067,30 @@ function renderDebtList() {
         itemDiv.className =
           "text-sm py-2 border-b border-gray-700 last:border-b-0";
         itemDiv.innerHTML = `
-              <div class="flex justify-between items-start mb-1">
-                  <div>
-                      <p class="font-medium text-gray-200">${d.why}</p>
-                      <p class="text-xs ${daysColor}">${daysText}</p>
-                  </div>
-                  <span class="font-semibold text-expense">${formatCurrency(
-                    d.remainingAmount
-                  )}</span>
-              </div>
-              <div class="flex justify-between items-center text-xs text-gray-500 mt-1">
-                  <span>Due: ${new Date(d.dueDate).toLocaleDateString()}</span>
-                  <div class="edit-btn-container">
-                      <button class="link-style text-xs mr-2 accent-text hover:text-accent-hover" onclick="openEditDebtForm('${
-                        d.id
-                      }')">Edit</button>
-                      <button class="link-style text-xs mr-2 text-income hover:opacity-80" onclick="openPayDebtForm('${
-                        d.id
-                      }')">Pay</button>
-                      <button class="text-gray-500 hover:text-expense text-xs focus:outline-none" onclick="deleteDebt('${
-                        d.id
-                      }')" title="Delete"><i class="fas fa-times"></i></button>
-                  </div>
-              </div>
-          `;
+          <div class="flex justify-between items-start mb-1">
+            <div>
+              <p class="font-medium text-gray-200">${d.why}</p>
+              <p class="text-xs ${daysColor}">${daysText}</p>
+            </div>
+            <span class="font-semibold text-expense">${formatCurrency(
+              d.remainingAmount
+            )}</span>
+          </div>
+          <div class="flex justify-between items-center text-xs text-gray-500 mt-1">
+            <span>Due: ${new Date(d.dueDate).toLocaleDateString()}</span>
+            <div class="edit-btn-container">
+              <button class="link-style text-xs mr-2 accent-text hover:text-accent-hover" onclick="openEditDebtForm('${
+                d.id
+              }')">Edit</button>
+              <button class="link-style text-xs mr-2 text-income hover:opacity-80" onclick="openPayDebtForm('${
+                d.id
+              }')">Pay</button>
+              <button class="text-gray-500 hover:text-expense text-xs focus:outline-none" onclick="deleteDebt('${
+                d.id
+              }')" title="Delete"><i class="fas fa-times"></i></button>
+            </div>
+          </div>
+        `;
         itemsListContainer.appendChild(itemDiv);
       });
     creditorWrapper.appendChild(itemsListContainer);
@@ -1170,130 +1099,183 @@ function renderDebtList() {
 }
 
 function renderReceivableList() {
-  const listContainer = $("#receivableList");
+  const listContainer = $("#receivableModalListContainer");
   if (!listContainer) {
-    console.error("#receivableList element not found.");
+    console.warn(
+      "#receivableModalListContainer element not found. Receivables modal might not be open."
+    );
     return;
   }
   listContainer.innerHTML = "";
 
+  const cashBankReceivables = state.receivables.filter(
+    (r) => r.type === "cash" || !r.type
+  );
+  const ccReceivables = state.receivables.filter((r) => r.type === "cc");
+
   if (state.receivables.length === 0) {
     listContainer.innerHTML =
-      '<p class="text-gray-400 text-sm">No receivables recorded.</p>';
+      '<p class="text-gray-400 text-sm text-center py-4">No receivables recorded.</p>';
     return;
   }
 
-  const totalsByPerson = state.receivables.reduce((acc, r) => {
-    const personName = r.who.trim();
-    if (!acc[personName]) {
-      acc[personName] = {
-        totalOwed: 0,
-        items: [],
-      };
+  const renderGroupInModal = (title, receivablesForGroup) => {
+    const sectionWrapper = document.createElement("div");
+    sectionWrapper.className = "mb-6";
+
+    const sectionTitleHeader = document.createElement("div");
+    sectionTitleHeader.className =
+      "flex justify-between items-center border-b border-gray-500 pb-2 mb-3";
+
+    const sectionTitle = document.createElement("h3");
+    sectionTitle.className = "text-xl font-semibold text-gray-100";
+    sectionTitle.textContent = title;
+    sectionTitleHeader.appendChild(sectionTitle);
+
+    const groupTotalAmount = receivablesForGroup.reduce(
+      (sum, r) => sum + r.remainingAmount,
+      0
+    );
+    const groupTotalSpan = document.createElement("span");
+
+    groupTotalSpan.className = "text-base font-normal text-gray-100";
+
+    groupTotalSpan.textContent = `Total: ${formatCurrency(groupTotalAmount)}`;
+    sectionTitleHeader.appendChild(groupTotalSpan);
+
+    sectionWrapper.appendChild(sectionTitleHeader);
+
+    if (receivablesForGroup.length === 0) {
+      const noItemsMessage = document.createElement("p");
+      noItemsMessage.className = "text-gray-400 text-sm pl-1";
+      noItemsMessage.textContent = `No ${title
+        .replace(" Loans", "")
+        .toLowerCase()} recorded.`;
+      sectionWrapper.appendChild(noItemsMessage);
+      listContainer.appendChild(sectionWrapper);
+      return;
     }
-    acc[personName].totalOwed += r.remainingAmount;
-    acc[personName].items.push(r);
-    return acc;
-  }, {});
 
-  const sortedPeople = Object.keys(totalsByPerson).sort((a, b) =>
-    a.localeCompare(b)
-  );
-
-  if (sortedPeople.length === 0) {
-    listContainer.innerHTML =
-      '<p class="text-gray-400 text-sm">No receivables to display by person.</p>';
-    return;
-  }
-
-  sortedPeople.forEach((personName) => {
-    const personData = totalsByPerson[personName];
-    const personId = `receivable-person-${generateId()}`;
-
-    const personWrapper = document.createElement("div");
-    personWrapper.className =
-      "mb-3 border border-gray-700 rounded-md overflow-hidden"; // This div takes full width of its column
-
-    const personHeader = document.createElement("div");
-    personHeader.className =
-      "flex justify-between items-center p-3 cursor-pointer hover:bg-gray-600/50 transition-colors"; // Adjusted hover
-    // MODIFIED: Changed background color to --bg-tertiary
-    personHeader.style.backgroundColor = "var(--bg-tertiary)";
-    personHeader.onclick = () => {
-      const itemsDiv = document.getElementById(personId);
-      const icon = personHeader.querySelector(".toggle-icon i");
-      if (itemsDiv) {
-        itemsDiv.classList.toggle("hidden");
-        if (itemsDiv.classList.contains("hidden")) {
-          icon.classList.remove("fa-chevron-up");
-          icon.classList.add("fa-chevron-down");
-        } else {
-          icon.classList.remove("fa-chevron-down");
-          icon.classList.add("fa-chevron-up");
-        }
+    const totalsByPerson = receivablesForGroup.reduce((acc, r) => {
+      const personName = r.who.trim();
+      if (!acc[personName]) {
+        acc[personName] = {
+          totalOwed: 0,
+          items: [],
+        };
       }
-    };
+      acc[personName].totalOwed += r.remainingAmount;
+      acc[personName].items.push(r);
+      return acc;
+    }, {});
 
-    personHeader.innerHTML = `
+    const sortedPeople = Object.keys(totalsByPerson).sort((a, b) =>
+      a.localeCompare(b)
+    );
+
+    if (sortedPeople.length === 0) {
+      const noItemsMessage = document.createElement("p");
+      noItemsMessage.className = "text-gray-400 text-sm pl-1";
+      noItemsMessage.textContent = `No receivables to display for ${title.toLowerCase()}.`;
+      sectionWrapper.appendChild(noItemsMessage);
+    } else {
+      sortedPeople.forEach((personName) => {
+        const personData = totalsByPerson[personName];
+        const personId = `modal-receivable-${title
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, "")}-${generateId()}`;
+
+        const personWrapper = document.createElement("div");
+        personWrapper.className =
+          "mb-3 border border-gray-700 rounded-md overflow-hidden shadow-sm";
+
+        const personHeader = document.createElement("div");
+        personHeader.className =
+          "flex justify-between items-center p-3 cursor-pointer hover:bg-gray-600/50 transition-colors";
+        personHeader.style.backgroundColor = "var(--bg-tertiary)";
+        personHeader.onclick = () => {
+          const itemsDiv = document.getElementById(personId);
+          const icon = personHeader.querySelector(".toggle-icon i");
+          if (itemsDiv) {
+            itemsDiv.classList.toggle("hidden");
+            if (itemsDiv.classList.contains("hidden")) {
+              icon.classList.remove("fa-chevron-up");
+              icon.classList.add("fa-chevron-down");
+            } else {
+              icon.classList.remove("fa-chevron-down");
+              icon.classList.add("fa-chevron-up");
+            }
+          }
+        };
+
+        personHeader.innerHTML = `
           <h4 class="text-md font-semibold text-gray-100">${personName}</h4>
           <div class="flex items-center">
-              <span class="text-md font-semibold text-income mr-3">${formatCurrency(
-                personData.totalOwed
-              )}</span>
-              <span class="toggle-icon text-gray-400"><i class="fas fa-chevron-down"></i></span>
+            <span class="text-md font-semibold text-income mr-3">${formatCurrency(
+              personData.totalOwed
+            )}</span>
+            <span class="toggle-icon text-gray-400"><i class="fas fa-chevron-down"></i></span>
           </div>
-      `;
-    personWrapper.appendChild(personHeader);
+        `;
+        personWrapper.appendChild(personHeader);
 
-    const itemsListContainer = document.createElement("div");
-    itemsListContainer.id = personId;
-    itemsListContainer.className = "hidden p-2 pt-0 space-y-2";
-    itemsListContainer.style.backgroundColor = "var(--bg-secondary)";
+        const itemsListContainer = document.createElement("div");
+        itemsListContainer.id = personId;
+        itemsListContainer.className = "hidden p-2 pt-0 space-y-2";
+        itemsListContainer.style.backgroundColor = "var(--bg-secondary)";
 
-    personData.items
-      .sort((a, b) => new Date(b.dateGiven) - new Date(a.dateGiven))
-      .forEach((r) => {
-        const srcAcc = state.accounts.find((a) => a.id === r.sourceAccount);
-        const srcTxt =
-          r.type === "cash"
-            ? `(From: ${srcAcc?.name || "Unknown"})`
-            : "(Via CC)";
+        personData.items
+          .sort((a, b) => new Date(b.dateGiven) - new Date(a.dateGiven))
+          .forEach((r) => {
+            const srcAcc = state.accounts.find((a) => a.id === r.sourceAccount);
+            let srcTxt = "";
+            if (r.type === "cash") {
+              srcTxt = `(From: ${srcAcc?.name || "Unknown"})`;
+            } else if (r.type === "cc") {
+              srcTxt = "(Via CC)";
+            }
 
-        const itemDiv = document.createElement("div");
-        itemDiv.className =
-          "text-sm py-2 border-b border-gray-700 last:border-b-0";
-        itemDiv.innerHTML = `
+            const itemDiv = document.createElement("div");
+            itemDiv.className =
+              "text-sm py-2 border-b border-gray-700 last:border-b-0";
+            itemDiv.innerHTML = `
               <div class="flex justify-between items-start mb-1">
-                  <div>
-                      <p class="font-medium text-gray-200">${r.why}</p>
-                      <p class="text-xs text-gray-400">${srcTxt}</p>
-                  </div>
-                  <span class="font-semibold text-income">${formatCurrency(
-                    r.remainingAmount
-                  )}</span>
+                <div>
+                  <p class="font-medium text-gray-200">${r.why}</p>
+                  <p class="text-xs text-gray-400">${srcTxt}</p>
+                </div>
+                <span class="font-semibold text-income">${formatCurrency(
+                  r.remainingAmount
+                )}</span>
               </div>
               <div class="flex justify-between items-center text-xs text-gray-500 mt-1">
-                  <span>Given: ${new Date(
-                    r.dateGiven
-                  ).toLocaleDateString()}</span>
-                  <div class="edit-btn-container">
-                      <button class="link-style text-xs mr-2 accent-text hover:text-accent-hover" onclick="openEditReceivableForm('${
-                        r.id
-                      }')">Edit</button>
-                      <button class="link-style text-xs mr-2 text-income hover:opacity-80" onclick="openReceivePaymentForm('${
-                        r.id
-                      }')">Receive</button>
-                      <button class="text-gray-500 hover:text-expense text-xs focus:outline-none" onclick="deleteReceivable('${
-                        r.id
-                      }')" title="Delete"><i class="fas fa-times"></i></button>
-                  </div>
+                <span>Given: ${new Date(
+                  r.dateGiven
+                ).toLocaleDateString()}</span>
+                <div class="edit-btn-container">
+                  <button class="link-style text-xs mr-2 accent-text hover:text-accent-hover" onclick="openEditReceivableForm('${
+                    r.id
+                  }')">Edit</button>
+                  <button class="link-style text-xs mr-2 text-income hover:opacity-80" onclick="openReceivePaymentForm('${
+                    r.id
+                  }')">Receive</button>
+                  <button class="text-gray-500 hover:text-expense text-xs focus:outline-none" onclick="deleteReceivable('${
+                    r.id
+                  }')" title="Delete"><i class="fas fa-times"></i></button>
+                </div>
               </div>
-          `;
-        itemsListContainer.appendChild(itemDiv);
+            `;
+            itemsListContainer.appendChild(itemDiv);
+          });
+        personWrapper.appendChild(itemsListContainer);
+        sectionWrapper.appendChild(personWrapper);
       });
-    personWrapper.appendChild(itemsListContainer);
-    listContainer.appendChild(personWrapper);
-  });
+    }
+    listContainer.appendChild(sectionWrapper);
+  };
+
+  renderGroupInModal("Cash/Bank Loans", cashBankReceivables);
+  renderGroupInModal("Credit Card Loans", ccReceivables);
 }
 
 function renderInstallmentList() {
@@ -1395,14 +1377,12 @@ function renderMonthlyOverviewChart() {
 
   for (let i = 11; i >= 0; i--) {
     const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const year = date.getFullYear(), // year variable is still useful for data filtering
-      month = date.getMonth(); // month variable is still useful for data filtering
+    const year = date.getFullYear(), 
+      month = date.getMonth(); 
 
-    // --- MODIFIED LINE FOR LABELS ---
     labels.push(
-      date.toLocaleString("default", { month: "short" }) // Now only shows the short month name
+      date.toLocaleString("default", { month: "short" }) 
     );
-    // --- END OF MODIFICATION ---
 
     let monthlyIncome = 0,
       monthlyExpense = 0;
@@ -1410,7 +1390,7 @@ function renderMonthlyOverviewChart() {
       const tDate = new Date(t.date);
       if (isNaN(tDate.getTime())) return;
       if (tDate.getFullYear() === year && tDate.getMonth() === month) {
-        // Ensure data is still filtered by correct year and month
+
         if (t.type === "income") monthlyIncome += t.amount;
         else if (t.type === "expense") monthlyExpense += t.amount;
       }
@@ -1419,8 +1399,8 @@ function renderMonthlyOverviewChart() {
     expenseData.push(monthlyExpense);
   }
 
-  const incomeColor = "#2a9d8f"; // From CSS var --income-color
-  const expenseColor = "#e74c3c"; // From CSS var --expense-color
+  const incomeColor = "#2a9d8f"; 
+  const expenseColor = "#e74c3c"; 
   const hexToRgba = (hex, alpha = 0.3) => {
     const r = parseInt(hex.slice(1, 3), 16);
     const g = parseInt(hex.slice(3, 5), 16);
@@ -1429,13 +1409,13 @@ function renderMonthlyOverviewChart() {
   };
 
   if (monthlyOverviewChartInstance) {
-    // If chart instance exists, update its data
+
     monthlyOverviewChartInstance.data.labels = labels;
-    monthlyOverviewChartInstance.data.datasets[0].data = incomeData; // Income dataset
-    monthlyOverviewChartInstance.data.datasets[1].data = expenseData; // Expense dataset
+    monthlyOverviewChartInstance.data.datasets[0].data = incomeData; 
+    monthlyOverviewChartInstance.data.datasets[1].data = expenseData; 
     monthlyOverviewChartInstance.update();
   } else {
-    // If chart instance doesn't exist, create it
+
     monthlyOverviewChartInstance = new Chart(ctx, {
       type: "line",
       data: {
@@ -1515,7 +1495,6 @@ function renderMonthlyOverviewChart() {
   }
 }
 
-// --- TRANSACTION & TRANSFER HANDLING ---
 function handleTransactionSubmit(event) {
   event.preventDefault();
   const form = event.target,
@@ -1858,7 +1837,6 @@ function refreshMonthlyViewIfRelevant(dateString) {
   }
 }
 
-// --- MONTHLY VIEW LOGIC ---
 let monthlyPieChartInstance = null;
 
 function setupMonthlyView() {
@@ -1926,12 +1904,11 @@ function renderMonthTabs(year) {
 
 function renderMonthlyDetails(month, year) {
   const container = $("#monthlyDetailsContainer");
-  container.innerHTML = ""; // Clear previous content
+  container.innerHTML = ""; 
 
-  // Filter transactions for the selected month and year
   const transactionsInMonth = state.transactions
     .filter((t) => {
-      const tDate = new Date(t.date + "T00:00:00"); // Ensure date is parsed as local
+      const tDate = new Date(t.date + "T00:00:00"); 
       return (
         !isNaN(tDate.getTime()) &&
         tDate.getFullYear() === year &&
@@ -2095,10 +2072,10 @@ function renderMonthlyDetails(month, year) {
   categorySection.className = "md:col-span-2 space-y-4";
 
   const summaryCard = document.createElement("div");
-  // --- MODIFIED: Changed background from bg-gray-800 to use CSS variable ---
-  summaryCard.className = "p-4 rounded-lg"; // Removed bg-gray-800
-  summaryCard.style.backgroundColor = "var(--bg-tertiary)"; // Added style for background
-  // --- END OF MODIFICATION ---
+
+  summaryCard.className = "p-4 rounded-lg"; 
+  summaryCard.style.backgroundColor = "var(--bg-tertiary)"; 
+
   summaryCard.innerHTML = `<h3 class="text-lg font-semibold mb-3">Category Summary</h3>`;
   const categoryList = document.createElement("ul");
   categoryList.className =
@@ -2122,7 +2099,6 @@ function renderMonthlyDetails(month, year) {
   summaryCard.appendChild(categoryList);
   categorySection.appendChild(summaryCard);
 
-  // Category Distribution Pie Chart Card
   if (sortedCategories.length > 0) {
     if (monthlyPieChartInstance) {
       monthlyPieChartInstance.destroy();
@@ -2130,10 +2106,9 @@ function renderMonthlyDetails(month, year) {
     }
 
     const chartCard = document.createElement("div");
-    // --- MODIFIED: Changed background from bg-gray-800 to use CSS variable ---
-    chartCard.className = "p-4 rounded-lg h-96 md:h-[450px] flex flex-col"; // Removed bg-gray-800
-    chartCard.style.backgroundColor = "var(--bg-tertiary)"; // Added style for background
-    // --- END OF MODIFICATION ---
+
+    chartCard.className = "p-4 rounded-lg h-96 md:h-[450px] flex flex-col"; 
+    chartCard.style.backgroundColor = "var(--bg-tertiary)"; 
 
     const titleEl = document.createElement("h3");
     titleEl.className = "text-lg font-semibold mb-3 text-center";
@@ -2144,7 +2119,7 @@ function renderMonthlyDetails(month, year) {
     canvasContainer.className = "flex-grow relative chart-container";
 
     const canvas = document.createElement("canvas");
-    canvas.id = "monthlyDetailPieChartCanvas"; // Fixed ID
+    canvas.id = "monthlyDetailPieChartCanvas"; 
 
     canvasContainer.appendChild(canvas);
     chartCard.appendChild(canvasContainer);
@@ -2156,13 +2131,13 @@ function renderMonthlyDetails(month, year) {
     };
     setTimeout(() => renderMonthlyPieChart(pieData), 100);
   } else {
-    // If no expenses, show a placeholder and ensure any old chart instance is destroyed
+
     const noChartCard = document.createElement("div");
-    // --- MODIFIED: Changed background from bg-gray-800 to use CSS variable ---
+
     noChartCard.className =
-      "p-4 rounded-lg h-72 md:h-80 flex items-center justify-center"; // Removed bg-gray-800
-    noChartCard.style.backgroundColor = "var(--bg-tertiary)"; // Added style for background
-    // --- END OF MODIFICATION ---
+      "p-4 rounded-lg h-72 md:h-80 flex items-center justify-center"; 
+    noChartCard.style.backgroundColor = "var(--bg-tertiary)"; 
+
     noChartCard.innerHTML =
       '<p class="text-gray-400 text-sm">No expense data for chart.</p>';
     categorySection.appendChild(noChartCard);
@@ -2177,12 +2152,12 @@ function renderMonthlyDetails(month, year) {
 }
 
 function renderMonthlyPieChart(data) {
-  const canvas = document.getElementById("monthlyDetailPieChartCanvas"); // Use fixed ID
+  const canvas = document.getElementById("monthlyDetailPieChartCanvas"); 
   if (!canvas || !canvas.getContext) {
     console.error(
       "Canvas for monthly pie chart (id: monthlyDetailPieChartCanvas) not found or invalid."
     );
-    // If canvas is not found (e.g. no expenses, so it wasn't added to DOM), destroy old instance if any
+
     if (monthlyPieChartInstance) {
       monthlyPieChartInstance.destroy();
       monthlyPieChartInstance = null;
@@ -2211,13 +2186,13 @@ function renderMonthlyPieChart(data) {
   );
 
   if (monthlyPieChartInstance) {
-    // If chart instance exists, update its data
+
     monthlyPieChartInstance.data.labels = data.labels;
     monthlyPieChartInstance.data.datasets[0].data = data.values;
     monthlyPieChartInstance.data.datasets[0].backgroundColor = backgroundColors;
     monthlyPieChartInstance.update();
   } else {
-    // If chart instance doesn't exist, create it
+
     monthlyPieChartInstance = new Chart(ctx, {
       type: "pie",
       data: {
@@ -2227,10 +2202,10 @@ function renderMonthlyPieChart(data) {
             label: "Expenses by Category",
             data: data.values,
             backgroundColor: backgroundColors,
-            borderColor: "var(--bg-secondary)", // Use CSS variable for border
+            borderColor: "var(--bg-secondary)", 
             borderWidth: 1,
             hoverOffset: 8,
-            hoverBorderColor: "var(--text-primary)", // Use CSS variable
+            hoverBorderColor: "var(--text-primary)", 
           },
         ],
       },
@@ -2239,16 +2214,9 @@ function renderMonthlyPieChart(data) {
         maintainAspectRatio: false,
         plugins: {
           legend: {
-            // --- KEY CHANGE: Set display to false to hide the legend ---
+
             display: false,
-            // --- END OF KEY CHANGE ---
-            // position: 'bottom', // No longer needed if display is false
-            // labels: { // No longer needed if display is false
-            // color: 'var(--text-secondary)',
-            // padding: 10,
-            // boxWidth: 12,
-            // font: { size: 10 }
-            // }
+
           },
           tooltip: {
             backgroundColor: "rgba(0,0,0,0.85)",
@@ -2265,7 +2233,7 @@ function renderMonthlyPieChart(data) {
                 }
                 if (context.parsed !== null) {
                   label += formatCurrency(context.parsed);
-                  // Ensure getDatasetMeta(0).total is available or fallback for percentage calculation
+
                   const datasetMeta = context.chart.getDatasetMeta(0);
                   const total =
                     datasetMeta.total ||
@@ -2286,7 +2254,6 @@ function renderMonthlyPieChart(data) {
   }
 }
 
-// --- CREDIT CARD LOGIC ---
 function renderCreditCardSection() {
   const limit = state.creditCard.limit || 0,
     transactions = state.creditCard.transactions || [];
@@ -2316,8 +2283,8 @@ function openCcHistoryModal() {
   $("#ccHistorySpentUnpaid").textContent = formatCurrency(spentUnpaid);
   const availableEl = $("#ccHistoryAvailable");
   availableEl.textContent = formatCurrency(available);
-  availableEl.classList.toggle("text-expense", available < 0); // Use text-expense
-  availableEl.classList.toggle("accent-text", available >= 0); // Use accent-text (orange)
+  availableEl.classList.toggle("text-expense", available < 0); 
+  availableEl.classList.toggle("accent-text", available >= 0); 
 
   listContainer.innerHTML = "";
   const sortedTransactions = [...transactions].sort(
@@ -2563,7 +2530,6 @@ function deleteCcTransaction(transactionId) {
   }
 }
 
-// --- DEBT/RECEIVABLE/INSTALLMENT LOGIC ---
 function openAddDebtForm() {
   openFormModal(
     "Add New Debt",
@@ -2662,7 +2628,6 @@ function handleEditDebtSubmit(event) {
   showNotification("Debt updated.", "success");
 }
 
-// MODIFIED: openPayDebtForm to include category selection
 function openPayDebtForm(debtId) {
   const debt = state.debts.find((d) => d.id === debtId);
   if (!debt) return;
@@ -2741,7 +2706,6 @@ function openPayDebtForm(debtId) {
   }
 }
 
-// MODIFIED: handlePayDebtSubmit to log an expense
 function handlePayDebtSubmit(event) {
   event.preventDefault();
   const form = new FormData(event.target);
@@ -2886,41 +2850,50 @@ function openAddReceivableForm() {
 }
 
 function toggleReceivableSourceAccount(type, groupId, selectId) {
-  const group = document.getElementById(groupId); // Use getElementById for reliability
+  const group = document.getElementById(groupId); 
   const select = document.getElementById(selectId);
-  const disclaimerElement = document.getElementById('receivableCcDisclaimer'); // Get the disclaimer element
+  const disclaimerElement = document.getElementById("receivableCcDisclaimer"); 
 
-  if (group && select) { // Ensure primary elements exist
+  if (group && select) {
+
     if (type === "cash") {
       group.style.display = "block";
       select.required = true;
       if (disclaimerElement) {
-        disclaimerElement.style.display = "none"; // Hide disclaimer for cash/bank loans
+        disclaimerElement.style.display = "none"; 
       }
-    } else { // This is the "cc" (Credit Card Loan) case
+    } else {
+
       group.style.display = "none";
       select.required = false;
       if (disclaimerElement) {
-        disclaimerElement.style.display = "block"; // Show disclaimer for CC loans
+        disclaimerElement.style.display = "block"; 
       }
     }
   } else {
-    if (!group) console.warn(`toggleReceivableSourceAccount: Group element with ID '${groupId}' not found.`);
-    if (!select) console.warn(`toggleReceivableSourceAccount: Select element with ID '${selectId}' not found.`);
+    if (!group)
+      console.warn(
+        `toggleReceivableSourceAccount: Group element with ID '${groupId}' not found.`
+      );
+    if (!select)
+      console.warn(
+        `toggleReceivableSourceAccount: Select element with ID '${selectId}' not found.`
+      );
   }
-  // It's good practice to also check if disclaimerElement exists, though it should if step B.1 was done.
+
   if (!disclaimerElement && type === "cc") {
-      console.warn("toggleReceivableSourceAccount: Disclaimer element with ID 'receivableCcDisclaimer' not found, but was expected for 'cc' type.");
+    console.warn(
+      "toggleReceivableSourceAccount: Disclaimer element with ID 'receivableCcDisclaimer' not found, but was expected for 'cc' type."
+    );
   }
 }
 
-// MODIFIED: handleAddReceivableSubmit to use correct form field name for source account
 function handleAddReceivableSubmit(event) {
   event.preventDefault();
   const form = new FormData(event.target);
   const amount = parseFloat(form.get("recAmount"));
   const type = form.get("recType");
-  // CORRECTED: Use 'receivableSourceAccount' to match the form's select name
+
   const sourceAccountId =
     type === "cash" ? form.get("receivableSourceAccount") : null;
 
@@ -2960,15 +2933,14 @@ function handleAddReceivableSubmit(event) {
       showNotification(`Insufficient funds in ${srcAcc.name}.`, "warning");
       return;
     }
-    srcAcc.balance -= amount; // Amount deduction
+    srcAcc.balance -= amount; 
     if (isNaN(srcAcc.balance)) srcAcc.balance = 0;
   } else if (type === "cc") {
-    // We no longer automatically create a CC transaction here.
-    // The ccTransactionId will remain null for 'cc' type receivables
-    // unless a CC transaction is manually linked later (which is not current functionality).
-    // A disclaimer in the form will guide the user.
-    console.log(`Receivable of type 'cc' added for ${newRec.who}. User to manually add CC expense if needed.`);
-}
+
+    console.log(
+      `Receivable of type 'cc' added for ${newRec.who}. User to manually add CC expense if needed.`
+    );
+  }
 
   state.receivables.push(newRec);
   saveData();
@@ -3121,21 +3093,46 @@ function handleEditReceivableSubmit(event) {
 
 function openReceivePaymentForm(recId) {
   const receivable = state.receivables.find((r) => r.id === recId);
-  if (!receivable) return;
-  openFormModal(
-    `Receive Payment: ${receivable.who}`,
-    `<p class="mb-2">Owed: <span class="font-semibold">${formatCurrency(
+  if (!receivable) {
+    showNotification("Receivable not found.", "error");
+    return;
+  }
+
+  let disclaimerHtml = "";
+  if (receivable.type === "cc") {
+    disclaimerHtml = `
+      <p id="receivablePaymentCcDisclaimer" class="disclaimer-text mt-3 mb-2">
+        <i class="fas fa-info-circle mr-1"></i>
+        <strong>Credit Card Receivable:</strong> The amount you receive will be added to the selected account. Remember, this does not pay your credit card bill. You'll need to record a separate 'Credit Card Payment' transaction later.
+      </p>
+    `;
+  }
+
+  const formHtml = `
+    <p class="mb-2">Owed: <span class="font-semibold">${formatCurrency(
       receivable.remainingAmount
-    )}</span> for ${
-      receivable.why
-    }</p><div><label class="block text-sm font-medium mb-1">Amount Received</label><input type="number" name="recPaymentAmount" step="0.01" min="0.01" max="${receivable.remainingAmount.toFixed(
-      2
-    )}" value="${receivable.remainingAmount.toFixed(
-      2
-    )}" required></div><div><label class="block text-sm font-medium mb-1">Receive Into Account</label><select name="recPaymentAccount" required></select></div><input type="hidden" name="recId" value="${recId}"><button type="submit" class="btn btn-primary w-full">Record Payment</button>`,
+    )}</span> by ${receivable.who} for ${receivable.why}</p>
+    <div>
+      <label for="recPaymentAmount" class="block text-sm font-medium mb-1">Amount Received (LKR)</label>
+      <input type="number" id="recPaymentAmount" name="recPaymentAmount" step="0.01" min="0.01" max="${receivable.remainingAmount.toFixed(
+        2
+      )}" value="${receivable.remainingAmount.toFixed(2)}" required>
+    </div>
+    <div>
+      <label for="recPaymentAccount" class="block text-sm font-medium mb-1">Receive Into Account</label>
+      <select id="recPaymentAccount" name="recPaymentAccount" required></select>
+    </div>
+    ${disclaimerHtml} 
+    <input type="hidden" name="recId" value="${recId}">
+    <button type="submit" class="btn btn-primary w-full mt-3">Record Payment</button>
+  `;
+
+  openFormModal(
+    `Receive Payment from: ${receivable.who}`,
+    formHtml,
     handleReceivePaymentSubmit
   );
-  populateDropdowns();
+  populateDropdowns(); 
 }
 
 function handleReceivePaymentSubmit(event) {
@@ -3200,7 +3197,7 @@ function deleteReceivable(recId) {
 }
 
 function openAddInstallmentForm() {
-  // Added instMonthsLeft input field
+
   const formHtml = `
             <div>
                 <label for="instDescription" class="block text-sm font-medium mb-1">Description</label>
@@ -3237,7 +3234,6 @@ function openAddInstallmentForm() {
   if (instStartDateInput)
     instStartDateInput.value = new Date().toISOString().split("T")[0];
 
-  // Add listener to ensure monthsLeft is not greater than totalMonths
   const totalMonthsInput = $("#instTotalMonths");
   const monthsLeftInput = $("#instMonthsLeft");
   if (totalMonthsInput && monthsLeftInput) {
@@ -3253,7 +3249,7 @@ function openAddInstallmentForm() {
       }
     };
     totalMonthsInput.addEventListener("input", setMaxMonthsLeft);
-    // Set initial max if totalMonths has a default or is pre-filled
+
     setMaxMonthsLeft();
   }
 }
@@ -3263,7 +3259,7 @@ function handleAddInstallmentSubmit(event) {
   const formData = new FormData(event.target);
   const fullAmount = parseFloat(formData.get("instFullAmount"));
   const totalMonths = parseInt(formData.get("instTotalMonths"));
-  let monthsLeft = parseInt(formData.get("instMonthsLeft")); // Get from new field
+  let monthsLeft = parseInt(formData.get("instMonthsLeft")); 
 
   if (
     isNaN(fullAmount) ||
@@ -3275,19 +3271,18 @@ function handleAddInstallmentSubmit(event) {
     return;
   }
 
-  // Validate and set monthsLeft
   if (isNaN(monthsLeft) || monthsLeft > totalMonths || monthsLeft < 0) {
-    monthsLeft = totalMonths; // Default to totalMonths if invalid or not provided
+    monthsLeft = totalMonths; 
   }
 
-  const monthlyAmount = fullAmount / totalMonths; // Monthly amount is based on the full original term
+  const monthlyAmount = fullAmount / totalMonths; 
 
   const newInstallment = {
     id: generateId(),
     description: formData.get("instDescription").trim(),
     monthlyAmount: monthlyAmount,
     totalMonths: totalMonths,
-    monthsLeft: monthsLeft, // Use the potentially adjusted monthsLeft
+    monthsLeft: monthsLeft, 
     startDate: formData.get("instStartDate"),
     originalFullAmount: fullAmount,
     timestamp: Date.now(),
@@ -3300,7 +3295,7 @@ function handleAddInstallmentSubmit(event) {
 
   state.installments.push(newInstallment);
   saveData();
-  renderDashboard(); // This will call renderInstallmentList
+  renderDashboard(); 
   closeModal("formModal");
   showNotification("Installment plan added.", "success");
 }
@@ -3393,7 +3388,6 @@ function payInstallmentMonth(installmentId) {
   populateDropdowns();
 }
 
-// Replace the existing handlePayInstallmentSubmit function with this:
 function handlePayInstallmentSubmit(event) {
   event.preventDefault();
   const form = new FormData(event.target);
@@ -3409,9 +3403,9 @@ function handlePayInstallmentSubmit(event) {
     return;
   }
   if (installment.monthsLeft <= 0) {
-    // Should ideally not happen if button is hidden, but good check
+
     showNotification("Installment plan already fully paid.", "info");
-    closeModal("formModal"); // Close modal if somehow opened for a paid plan
+    closeModal("formModal"); 
     return;
   }
   if (account.balance < installment.monthlyAmount) {
@@ -3423,7 +3417,6 @@ function handlePayInstallmentSubmit(event) {
     return;
   }
 
-  // Process payment
   account.balance -= installment.monthlyAmount;
   if (isNaN(account.balance)) account.balance = 0;
 
@@ -3446,7 +3439,7 @@ function handlePayInstallmentSubmit(event) {
 
   let notificationMessage;
   if (installment.monthsLeft <= 0) {
-    // Installment is now fully paid, remove it from the list
+
     state.installments = state.installments.filter(
       (i) => i.id !== installmentId
     );
@@ -3456,7 +3449,7 @@ function handlePayInstallmentSubmit(event) {
   }
 
   saveData();
-  renderDashboard(); // This will re-render the installment list
+  renderDashboard(); 
   populateDropdowns();
   closeModal("formModal");
   showNotification(notificationMessage, "success");
@@ -3497,7 +3490,7 @@ function openPayCcItemForm(ccTransactionId) {
     .filter(
       (c) =>
         c.toLowerCase() !== "income" &&
-        // c.toLowerCase() !== 'debt repayment' && // Not relevant here
+
         c.toLowerCase() !== ccPaymentCategoryName.toLowerCase()
     )
     .sort((a, b) => a.localeCompare(b));
@@ -3549,13 +3542,12 @@ function openPayCcItemForm(ccTransactionId) {
   );
   populateDropdowns();
 
-  // Add event listener for the new checkbox for CC payment
   const logCcExpenseCheckbox = document.getElementById("logCcPaymentAsExpense");
   const ccCategoryGroupDiv = document.getElementById("ccPaymentCategoryGroup");
   const ccCategorySelect = document.getElementById("modalCcPayCategory");
 
   if (logCcExpenseCheckbox && ccCategoryGroupDiv && ccCategorySelect) {
-    // Initial state based on checkbox
+
     ccCategoryGroupDiv.style.display = logCcExpenseCheckbox.checked
       ? "block"
       : "none";
@@ -3660,13 +3652,11 @@ function handlePayCcItemSubmit(event) {
   showNotification(notificationMessage, "success");
 }
 
-// --- SETTINGS LOGIC ---
 function openSettingsModal() {
-  // First, render the dynamic content within the panels (like account lists, category lists)
-  renderSettingsForm(); // This function populates the content of the panels
 
-  // Then, set up the tab navigation itself
-  setupSettingsTabs(); // This creates tab buttons and sets the first tab active
+  renderSettingsForm(); 
+
+  setupSettingsTabs(); 
 
   const storageInfoElement = $("#storageSizeInfo");
   if (storageInfoElement) {
@@ -3676,19 +3666,19 @@ function openSettingsModal() {
   }
 
   $("#settingsModal").style.display = "block";
-  cancelDeleteAllData(); // Resets the delete slider if it was active
-  displayAppVersion(); // Ensure version is displayed
+  cancelDeleteAllData(); 
+  displayAppVersion(); 
 }
 
 function renderSettingsForm() {
-  // --- 1. Combined Account Names & Balances Management (within #settingsAccountsPanel) ---
+
   const accountManagementList = $("#accountManagementList");
   if (!accountManagementList) {
     console.error(
       "#accountManagementList element not found in #settingsAccountsPanel."
     );
   } else {
-    accountManagementList.innerHTML = ""; // Clear previous entries
+    accountManagementList.innerHTML = ""; 
     state.accounts.forEach((acc) => {
       const accRow = document.createElement("div");
       accRow.className =
@@ -3725,14 +3715,13 @@ function renderSettingsForm() {
       accountManagementList.appendChild(accRow);
     });
   }
-  // Attach submit handler to the form containing accountManagementList
-  const manageAccountsForm = $("#manageAccountsForm"); // This form is in #settingsAccountsPanel
+
+  const manageAccountsForm = $("#manageAccountsForm"); 
   if (manageAccountsForm) {
     manageAccountsForm.onsubmit = handleManageAccountsSubmit;
   }
 
-  // --- 2. Credit Card Settings (within #settingsCreditCardPanel) ---
-  const settingsCcLimitAmountInput = $("#settingsCcLimitAmount"); // Direct ID
+  const settingsCcLimitAmountInput = $("#settingsCcLimitAmount"); 
   if (settingsCcLimitAmountInput) {
     settingsCcLimitAmountInput.value = (
       (state.creditCard && state.creditCard.limit) ||
@@ -3743,7 +3732,7 @@ function renderSettingsForm() {
     settingsCcLimitAmountInput.style.color = "var(--text-primary)";
   }
 
-  const settingsCcLimitForm = $("#settingsCcLimitForm"); // Direct ID
+  const settingsCcLimitForm = $("#settingsCcLimitForm"); 
   if (settingsCcLimitForm) {
     settingsCcLimitForm.onsubmit = (event) => {
       event.preventDefault();
@@ -3767,7 +3756,7 @@ function renderSettingsForm() {
     };
   }
 
-  const toggleCcSectionElement = $("#toggleCcSection"); // Direct ID
+  const toggleCcSectionElement = $("#toggleCcSection"); 
   if (toggleCcSectionElement) {
     if (!state.settings) {
       state.settings = {
@@ -3780,9 +3769,9 @@ function renderSettingsForm() {
       state.settings.showCcDashboardSection !== undefined
         ? state.settings.showCcDashboardSection
         : true;
-    // Ensure onchange is not re-assigned if already set, or manage it carefully
+
     if (!toggleCcSectionElement.dataset.listenerAttached) {
-      // Prevent multiple listeners
+
       toggleCcSectionElement.onchange = () => {
         if (!state.settings) {
           state.settings = {
@@ -3805,8 +3794,7 @@ function renderSettingsForm() {
     }
   }
 
-  // --- 3. Manage Expense Categories (within #settingsCategoriesPanel) ---
-  const addCategoryForm = $("#addCategoryForm"); // Direct ID
+  const addCategoryForm = $("#addCategoryForm"); 
   if (addCategoryForm) {
     addCategoryForm.onsubmit = addCategory;
     const newCategoryNameInput =
@@ -3817,11 +3805,8 @@ function renderSettingsForm() {
       newCategoryNameInput.style.color = "var(--text-primary)";
     }
   }
-  renderCategorySettingsList(); // This function targets #categorySettingsList directly
+  renderCategorySettingsList(); 
 
-  // Note: Data Management and Danger Zone panels are mostly static HTML elements,
-  // their functionality (buttons etc.) is typically attached once in initializeUI.
-  // If they had dynamic content needing refresh, that would go here too.
 }
 
 function renderCategorySettingsList() {
@@ -3830,7 +3815,7 @@ function renderCategorySettingsList() {
     console.error("#categorySettingsList element not found.");
     return;
   }
-  categoryList.innerHTML = ""; // Clear existing list items
+  categoryList.innerHTML = ""; 
 
   const sortedCategories = [...state.categories].sort((a, b) =>
     a.localeCompare(b)
@@ -3838,16 +3823,14 @@ function renderCategorySettingsList() {
 
   sortedCategories.forEach((cat) => {
     const li = document.createElement("li");
-    // MODIFIED: Removed bg-gray-600, added inline style for var(--bg-secondary)
+
     li.className = "flex justify-between items-center p-2 rounded";
     li.style.backgroundColor = "var(--bg-secondary)";
-    li.style.borderColor = "var(--border-color)"; // Optional: ensure border consistency
-    li.style.borderWidth = "1px"; // Optional: ensure border consistency
+    li.style.borderColor = "var(--border-color)"; 
+    li.style.borderWidth = "1px"; 
 
-    // Input for category name
     const inputElementHTML = `<input type="text" value="${cat}" data-original-name="${cat}" class="bg-transparent border-none focus:ring-0 focus:outline-none p-0 flex-grow mr-2 text-sm">`;
 
-    // Div for buttons
     const buttonsDiv = document.createElement("div");
     buttonsDiv.className = "flex items-center gap-x-2";
 
@@ -3982,17 +3965,15 @@ function handleSetCcLimitSubmit(event) {
   showNotification(`Credit limit set to ${formatCurrency(limit)}.`, "success");
 }
 
-// --- NEW FUNCTION to control CC Dashboard Section Visibility ---
 function updateCcDashboardSectionVisibility() {
   const ccDashboardSection = $("#creditCardDashboardSection");
   if (ccDashboardSection) {
-    // Default to true (visible) if the setting is undefined or state.settings itself is undefined
-    let isVisible = true; // Default to true
+
+    let isVisible = true; 
     if (state.settings && state.settings.showCcDashboardSection !== undefined) {
       isVisible = state.settings.showCcDashboardSection;
     } else if (state.settings === undefined) {
-      // If state.settings is undefined, we assume it's a fresh load before settings are established
-      // and default to showing the section. Initialize state.settings here if it's missing.
+
       state.settings = {
         initialSetupDone: false,
         showCcDashboardSection: true,
@@ -4003,29 +3984,18 @@ function updateCcDashboardSectionVisibility() {
     }
 
     if (isVisible) {
-      ccDashboardSection.style.display = ""; // Reverts to CSS default (block, grid, etc.)
+      ccDashboardSection.style.display = ""; 
     } else {
       ccDashboardSection.style.display = "none";
     }
   }
 
-  // Also, ensure the CC Limit settings card visibility in the Settings Modal
-  // is tied to this, so users can't set a limit if the feature is "off".
-  // This part might be redundant if the CC Limit card is always part of the settings modal,
-  // but good to consider if its visibility should also be controlled.
-  // For now, we assume the ccLimitSettingsCard in the modal remains visible,
-  // and only the dashboard section is toggled.
-  // If you want to hide the CC Limit settings in the modal as well when the toggle is off:
   const ccLimitSettingsCard = $("#ccLimitSettingsCard");
   if (ccLimitSettingsCard) {
-    // const isVisible = (state.settings && state.settings.showCcDashboardSection !== undefined) ? state.settings.showCcDashboardSection : true;
-    // ccLimitSettingsCard.style.display = isVisible ? '' : 'none';
-    // Decided against hiding the settings card itself for now, as the toggle is within it.
-    // The toggle itself indicates the feature's status.
+
   }
 }
 
-// This function will handle the submission of the new combined "Manage Account Names & Balances" form
 function handleManageAccountsSubmit(event) {
   event.preventDefault();
   const formData = new FormData(event.target);
@@ -4038,21 +4008,20 @@ function handleManageAccountsSubmit(event) {
 
     if (newNameInput === null || newBalanceInput === null) {
       console.warn(`Inputs for account ${acc.id} not found in form data.`);
-      return; // Skip if inputs are missing for some reason
+      return; 
     }
 
     const newName = newNameInput.trim();
     const newBalance = parseFloat(newBalanceInput);
 
-    // Validate Name (if not 'cash' account)
     if (acc.id !== "cash") {
       if (!newName) {
         errors.push(
           `Account name for "${acc.name}" (ID: ${acc.id}) cannot be empty.`
         );
-        // Optionally, revert input to original if you have access to it here, or just prevent save.
+
       } else if (newName !== acc.name) {
-        // Check for duplicate names
+
         if (
           state.accounts.some(
             (existingAcc) =>
@@ -4073,13 +4042,12 @@ function handleManageAccountsSubmit(event) {
       }
     }
 
-    // Validate and Update Balance
     if (isNaN(newBalance)) {
       errors.push(
         `Invalid balance entered for account "${acc.name}". Please enter a valid number.`
       );
     } else if (Math.abs(acc.balance - newBalance) > 0.005) {
-      // Check if balance actually changed
+
       console.log(
         `Account ${acc.id} balance changed from ${acc.balance.toFixed(
           2
@@ -4092,21 +4060,20 @@ function handleManageAccountsSubmit(event) {
 
   if (errors.length > 0) {
     errors.forEach((err) => showNotification(err, "error", 6000));
-    // Optionally, re-render the form to show original values or highlight errors
-    renderSettingsForm(); // Re-render to reset inputs to current state if save fails due to validation
+
+    renderSettingsForm(); 
     return;
   }
 
   if (changesMade) {
-    // Mark initial setup as done if it wasn't already,
-    // as managing accounts implies setup is complete.
+
     if (state.settings && !state.settings.initialSetupDone) {
       state.settings.initialSetupDone = true;
     }
     saveData();
-    renderDashboard(); // Update main dashboard
-    populateDropdowns(); // Update dropdowns everywhere
-    renderSettingsForm(); // Re-render settings form to reflect saved changes (e.g., new names)
+    renderDashboard(); 
+    populateDropdowns(); 
+    renderSettingsForm(); 
     showNotification(
       "Account names and/or balances updated successfully.",
       "success"
@@ -4119,7 +4086,6 @@ function handleManageAccountsSubmit(event) {
   }
 }
 
-// --- DATA MANAGEMENT (Export/Import/Delete) ---
 function exportData() {
   try {
     const dataStr = JSON.stringify(state, null, 2);
@@ -4203,7 +4169,7 @@ function cancelDeleteAllData() {
   resetDeleteSlider();
 }
 let maxTranslateX = 0;
-let isDragging = false; // Slider globals
+let isDragging = false; 
 function setupDeleteSlider() {
   const sliderContainer = $("#deleteSliderContainer");
   const handle = $("#deleteSliderHandle");
@@ -4214,7 +4180,7 @@ function setupDeleteSlider() {
   let currentTranslateX = 0;
 
   const calculateMaxTranslate = () => {
-    maxTranslateX = sliderContainer.offsetWidth - handle.offsetWidth - 4; // 2px for handle's own border/padding on each side if any, adjust as needed
+    maxTranslateX = sliderContainer.offsetWidth - handle.offsetWidth - 4; 
   };
 
   window.resetDeleteSlider = () => {
@@ -4225,8 +4191,8 @@ function setupDeleteSlider() {
     track.style.transition =
       "width 0.2s ease-out, background-color 0.2s ease-out";
     handle.style.transform = `translateX(0px)`;
-    track.style.width = `0px`; // Reset track width
-    track.style.backgroundColor = "var(--button-success-bg)"; // Default track color (becomes visible on drag)
+    track.style.width = `0px`; 
+    track.style.backgroundColor = "var(--button-success-bg)"; 
     handle.innerHTML = '<i class="fas fa-arrow-right"></i>';
     handle.style.backgroundColor = "var(--accent-primary)";
     handle.style.cursor = "grab";
@@ -4234,10 +4200,10 @@ function setupDeleteSlider() {
   };
 
   const startDrag = (clientX) => {
-    calculateMaxTranslate(); // Calculate max on drag start, in case of resize
+    calculateMaxTranslate(); 
     isDragging = true;
-    startX = clientX - handle.getBoundingClientRect().left; // Position of mouse relative to handle's left edge
-    handle.style.transition = "none"; // No transition during drag for smoothness
+    startX = clientX - handle.getBoundingClientRect().left; 
+    handle.style.transition = "none"; 
     track.style.transition = "none";
     handle.style.cursor = "grabbing";
     sliderContainer.style.cursor = "grabbing";
@@ -4249,7 +4215,7 @@ function setupDeleteSlider() {
       clientX - sliderContainer.getBoundingClientRect().left - startX;
     currentTranslateX = Math.max(0, Math.min(newTranslateX, maxTranslateX));
     handle.style.transform = `translateX(${currentTranslateX}px)`;
-    track.style.width = `${currentTranslateX + handle.offsetWidth / 2}px`; // Make track follow handle center
+    track.style.width = `${currentTranslateX + handle.offsetWidth / 2}px`; 
   };
 
   const endDrag = () => {
@@ -4257,21 +4223,20 @@ function setupDeleteSlider() {
     isDragging = false;
     handle.style.cursor = "grab";
     sliderContainer.style.cursor = "pointer";
-    // Re-apply transitions for snap back or completion animation
+
     handle.style.transition =
       "transform 0.2s ease-out, background-color 0.2s ease-out";
     track.style.transition =
       "width 0.2s ease-out, background-color 0.2s ease-out";
 
     if (currentTranslateX >= maxTranslateX - 1) {
-      // Allow a tiny margin for completion
+
       completeDeletion();
     } else {
-      resetDeleteSlider(); // Snap back
+      resetDeleteSlider(); 
     }
-  }; // <<< --- ADDED THIS CLOSING BRACE for endDrag
+  }; 
 
-  // Event Listeners
   handle.addEventListener("mousedown", (e) => startDrag(e.clientX));
   document.addEventListener("mousemove", (e) => {
     if (isDragging) drag(e.clientX);
@@ -4281,7 +4246,7 @@ function setupDeleteSlider() {
   handle.addEventListener(
     "touchstart",
     (e) => {
-      e.preventDefault(); // Prevent page scroll
+      e.preventDefault(); 
       startDrag(e.touches[0].clientX);
     },
     {
@@ -4292,7 +4257,7 @@ function setupDeleteSlider() {
     "touchmove",
     (e) => {
       if (isDragging) {
-        e.preventDefault(); // Prevent page scroll during drag
+        e.preventDefault(); 
         drag(e.touches[0].clientX);
       }
     },
@@ -4307,11 +4272,11 @@ function setupDeleteSlider() {
       $("#deleteConfirmationSection") &&
       !$("#deleteConfirmationSection").classList.contains("hidden")
     ) {
-      calculateMaxTranslate(); // Recalculate if the slider is visible
-      resetDeleteSlider(); // And reset its position
+      calculateMaxTranslate(); 
+      resetDeleteSlider(); 
     }
   });
-} // <<<--- ADDED THIS CLOSING BRACE for setupDeleteSlider
+} 
 
 function completeDeletion() {
   const handle = $("#deleteSliderHandle");
@@ -4335,7 +4300,6 @@ function completeDeletion() {
   }, 500);
 }
 
-// --- CASH COUNTER LOGIC ---
 function openCashCounter() {
   const form = $("#cashCounterForm");
   const denominations = [5000, 1000, 500, 100, 50, 20, 10, 5, 2, 1];
@@ -4401,7 +4365,6 @@ function calculateCashTotal() {
   }
 }
 
-// --- MODAL HANDLING ---
 function closeModal(modalId) {
   const modal = $(`#${modalId}`);
   if (modal) modal.style.display = "none";
@@ -4429,7 +4392,6 @@ window.addEventListener("click", (event) => {
   });
 });
 
-// --- EDIT FORM POPULATION (Wrapper functions that call modal openers) ---
 function openEditTransactionForm(id, event) {
   openEditTransactionModal(id, event);
 }
@@ -4438,13 +4400,6 @@ function openEditCcTransactionForm(id) {
   openEditCcTransactionModal(id);
 }
 
-// --- BACKUP REMINDER LOGIC ---
-
-/**
- * Handles the dismissal of the backup reminder.
- * Stores the current date for the given reminder key in localStorage.
- * @param {string} reminderKey - The localStorage key (e.g., 'lastReminderShownForSunday').
- */
 function handleBackupReminderDismiss(reminderKey) {
   try {
     localStorage.setItem(reminderKey, getCurrentDateString());
@@ -4454,14 +4409,9 @@ function handleBackupReminderDismiss(reminderKey) {
   } catch (e) {
     console.error("Error saving backup reminder dismissal state:", e);
   }
-  closeModal("formModal"); // Reuses the formModal for the reminder
+  closeModal("formModal"); 
 }
 
-/**
- * Shows the backup reminder pop-up using the existing formModal structure.
- * Includes "Backup Now" and "I'll Do It Later" buttons.
- * @param {string} reminderKey - The localStorage key to update upon dismissal.
- */
 function showBackupReminderPopup(reminderKey) {
   const title = "Backup Reminder";
   const message =
@@ -4501,33 +4451,26 @@ function showBackupReminderPopup(reminderKey) {
   }
 }
 
-/**
- * Checks if a backup reminder should be shown and triggers it.
- * This function is intended to be called periodically.
- */
 function checkAndTriggerBackupReminder() {
-  // --- ADD THIS CHECK AT THE BEGINNING ---
-  // If initial setup isn't done (meaning no initial balances set, likely no data)
-  // OR if there are absolutely no transactions, don't show the backup reminder.
+
   if (!state.settings.initialSetupDone && state.transactions.length === 0) {
     console.log(
       "Skipping backup reminder: Initial setup not done or no transactions."
     );
     return;
   }
-  // --- END OF ADDED CHECK ---
 
   const today = new Date();
-  const dayOfWeek = today.getDay(); // 0 for Sunday, 3 for Wednesday
+  const dayOfWeek = today.getDay(); 
   const currentDateStr = getCurrentDateString();
 
   let reminderKey = null;
 
   if (dayOfWeek === 0) {
-    // Sunday
+
     reminderKey = "lastReminderShownForSunday";
   } else if (dayOfWeek === 3) {
-    // Wednesday
+
     reminderKey = "lastReminderShownForWednesday";
   }
 
@@ -4553,19 +4496,16 @@ function checkAndTriggerBackupReminder() {
   }
 }
 
-let activeSettingsTab = null; // To keep track of the active tab button
+let activeSettingsTab = null; 
 
 const settingsTabsConfig = [
   { label: "Accounts", targetPanelId: "settingsAccountsPanel" },
   { label: "Credit Card", targetPanelId: "settingsCreditCardPanel" },
   { label: "Categories", targetPanelId: "settingsCategoriesPanel" },
-  { label: "Data", targetPanelId: "settingsDataManagementPanel" }, // "Danger Zone" is now inside this panel
-  // "About" and "Danger Zone" are no longer separate tabs in this configuration
+  { label: "Data", targetPanelId: "settingsDataManagementPanel" }, 
+
 ];
 
-/**
- * Sets up the tab navigation and functionality for the Settings modal.
- */
 function setupSettingsTabs() {
   const tabsContainer = document.getElementById("settingsTabsContainer");
   const tabContentContainer = document.getElementById("settingsTabContent");
@@ -4575,18 +4515,15 @@ function setupSettingsTabs() {
     return;
   }
 
-  tabsContainer.innerHTML = ""; // Clear any existing tabs
-  activeSettingsTab = null; // Reset active tab state
+  tabsContainer.innerHTML = ""; 
+  activeSettingsTab = null; 
 
   settingsTabsConfig.forEach((tabConfig, index) => {
     const li = document.createElement("li");
-    // Tailwind's justify-center on the ul will handle centering.
-    // Individual li elements don't need margin if gap is used on ul or flex properties.
-    // If you need specific spacing between tabs, it's better to add it to the <li> or via gap on <ul>.
 
     const button = document.createElement("button");
     button.className =
-      "settings-tab-button inline-block p-3 border-b-2 rounded-t-lg"; // Base classes from your CSS
+      "settings-tab-button inline-block p-3 border-b-2 rounded-t-lg"; 
     button.textContent = tabConfig.label;
     button.dataset.tabTarget = `#${tabConfig.targetPanelId}`;
 
@@ -4597,13 +4534,11 @@ function setupSettingsTabs() {
     li.appendChild(button);
     tabsContainer.appendChild(li);
 
-    // Set the first tab as active by default when the modal is opened
     if (index === 0) {
-      // Call switchSettingsTab directly here to ensure the first panel is shown
-      // and the button is marked active when setupSettingsTabs is first called.
+
       switchSettingsTab(button, tabConfig.targetPanelId);
     } else {
-      // Ensure other panels are hidden initially
+
       const panel = document.getElementById(tabConfig.targetPanelId);
       if (panel) {
         panel.classList.add("hidden");
@@ -4612,31 +4547,24 @@ function setupSettingsTabs() {
   });
 }
 
-/**
- * Handles switching between tabs in the Settings modal.
- * @param {HTMLElement} clickedButton - The tab button that was clicked.
- * @param {string} targetPanelId - The ID of the content panel to show.
- */
 function switchSettingsTab(clickedButton, targetPanelId) {
   const tabContentContainer = document.getElementById("settingsTabContent");
   if (!tabContentContainer) return;
 
-  // Deactivate previously active tab and hide its panel
   if (activeSettingsTab && activeSettingsTab.button !== clickedButton) {
     activeSettingsTab.button.classList.remove("active");
-    // Ensure the target selector is correct (includes #)
+
     const oldPanelSelector = activeSettingsTab.button.dataset.tabTarget;
     if (oldPanelSelector) {
-      const oldPanel = tabContentContainer.querySelector(oldPanelSelector); // Use querySelector on the container
+      const oldPanel = tabContentContainer.querySelector(oldPanelSelector); 
       if (oldPanel) {
         oldPanel.classList.add("hidden");
       }
     }
   }
 
-  // Activate new tab and show its panel
   clickedButton.classList.add("active");
-  const targetPanel = document.getElementById(targetPanelId); // Direct ID selection for the panel to show
+  const targetPanel = document.getElementById(targetPanelId); 
   if (targetPanel) {
     targetPanel.classList.remove("hidden");
   } else {
@@ -4646,12 +4574,11 @@ function switchSettingsTab(clickedButton, targetPanelId) {
   activeSettingsTab = { button: clickedButton, panelId: targetPanelId };
 }
 
-// --- INITIALIZATION ---
 function initializeUI(isRefresh = false) {
   console.log("Initializing UI...");
 
   if (!isRefresh) {
-    loadData(); // Populates 'state' from localStorage or defaults
+    loadData(); 
   }
 
   if (
@@ -4674,7 +4601,8 @@ function initializeUI(isRefresh = false) {
     mainCcDateInput.value = new Date().toISOString().split("T")[0];
 
   populateDropdowns();
-  renderDashboard();
+  renderDashboard(); 
+
   updateCcDashboardSectionVisibility();
   setupMonthlyView();
   if (!window.deleteSliderInitialized) {
@@ -4725,6 +4653,22 @@ function initializeUI(isRefresh = false) {
   $("#cashCounterBtn").onclick = openCashCounter;
   $("#ccHistoryBtn").onclick = openCcHistoryModal;
 
+  const viewDebtsBtn = $("#viewDebtsBtn");
+  if (viewDebtsBtn) {
+    viewDebtsBtn.onclick = () => {
+      renderDebtList(); 
+      $("#debtsViewModal").style.display = "block"; 
+    };
+  }
+
+  const viewReceivablesBtn = $("#viewReceivablesBtn");
+  if (viewReceivablesBtn) {
+    viewReceivablesBtn.onclick = () => {
+      renderReceivableList(); 
+      $("#receivablesViewModal").style.display = "block"; 
+    };
+  }
+
   const transactionTypeSelect = $("#transactionType");
   const categoryGroup = $("#categoryGroup");
   const descriptionInput = $("#description");
@@ -4747,14 +4691,26 @@ function initializeUI(isRefresh = false) {
     toggleMainCategoryVisibility();
   }
 
-  renderDebtList();
-  renderInstallmentList();
+  renderInstallmentList(); 
 
   if (!window.countdownInterval) {
+
     window.countdownInterval = setInterval(() => {
-      renderDebtList();
-      renderInstallmentList();
-    }, 1000 * 60 * 60);
+
+      const totalOwedEl = $("#totalOwed");
+      const totalOwedToMeEl = $("#totalOwedToMe");
+      if (totalOwedEl) {
+        totalOwedEl.textContent = `Total: ${formatCurrency(
+          state.debts.reduce((s, d) => s + d.remainingAmount, 0)
+        )}`;
+      }
+      if (totalOwedToMeEl) {
+        totalOwedToMeEl.textContent = `Total: ${formatCurrency(
+          state.receivables.reduce((s, r) => s + r.remainingAmount, 0)
+        )}`;
+      }
+      renderInstallmentList(); 
+    }, 1000 * 60 * 60); 
   }
 
   if (!window.backupReminderInterval) {
@@ -4767,42 +4723,35 @@ function initializeUI(isRefresh = false) {
   }
 }
 
-// --- STARTUP ---
 document.addEventListener("DOMContentLoaded", () => {
   console.log("DOM Loaded. Initializing...");
   loadData();
   initializeUI();
   const preloaderElement = document.getElementById("preloader");
   const appContentElement = document.getElementById("app-content");
-  const preloaderDuration = 1250; // 1.25 seconds
+  const preloaderDuration = 1250; 
 
   if (preloaderElement && appContentElement) {
     console.log(
       `Preloader will be shown for ${preloaderDuration / 1000} seconds.`
     );
 
-    // This timeout will hide the preloader and show the main content
     setTimeout(() => {
       console.log(
         "Preloader timer finished. Hiding preloader, showing app content."
       );
 
-      // Start fading out preloader by adding the 'hidden' class (defined in CSS)
       preloaderElement.classList.add("hidden");
 
-      // Start fading in app content by adding the 'visible' class (defined in CSS)
       appContentElement.classList.add("visible");
 
-      // After the preloader's fade-out transition (0.75s as per CSS),
-      // set its display to 'none' so it doesn't take up space or interfere.
-      // The transition duration for #preloader opacity is 0.75s (750ms).
       setTimeout(() => {
         preloaderElement.style.display = "none";
         console.log("Preloader display set to 'none' after fade-out.");
-      }, 750); // This duration MUST match the CSS transition-duration for #preloader
+      }, 750); 
     }, preloaderDuration);
   } else {
-    // Fallback if essential elements are missing, to prevent a blank page
+
     if (!preloaderElement) {
       console.error(
         "Preloader element with ID 'preloader' not found. Timer preloader cannot run."
@@ -4813,15 +4762,15 @@ document.addEventListener("DOMContentLoaded", () => {
         "App content element with ID 'app-content' not found. Timer preloader cannot run."
       );
     }
-    // Attempt to make the app content visible anyway if the preloader structure is broken
+
     if (appContentElement) {
-      appContentElement.classList.add("visible"); // Show app content
+      appContentElement.classList.add("visible"); 
       console.warn(
         "Attempted to show app content due to missing preloader elements."
       );
     }
     if (preloaderElement) {
-      preloaderElement.style.display = "none"; // Hide preloader immediately
+      preloaderElement.style.display = "none"; 
     }
   }
 });

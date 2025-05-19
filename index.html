@@ -3,7 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="application-version" content="v3.48d" /> <title>Kaasi - Expense Tracker | Manage Your Finances 🇱🇰</title>
+    <meta name="application-version" content="v3.48d" />
+    <title>Kaasi - Expense Tracker | Manage Your Finances 🇱🇰</title>
     <meta
       name="title"
       content="Kaasi - Expense Tracker | Manage Your Finances 🇱🇰"
@@ -57,12 +58,18 @@
   </head>
 
   <body class="min-h-screen p-4 md:p-8 transition-colors duration-300">
-
     <div id="preloader">
       <div class="pulsing-icon-container">
-        <img src="img/LogoIcon.svg" alt="Loading Logo" id="preloader-logo-icon" class="pulsing-logo-element">
+        <img
+          src="img/LogoIcon.svg"
+          alt="Loading Logo"
+          id="preloader-logo-icon"
+          class="pulsing-logo-element"
+          onerror="this.onerror=null; this.src='https://placehold.co/60x60/1a1a1a/e67e26?text=K&font=satoshi';"
+        />
       </div>
-      </div>
+    </div>
+
     <div id="app-content">
       <div class="container mx-auto max-w-7xl">
         <header class="flex justify-between items-center mb-6 md:mb-10">
@@ -83,7 +90,11 @@
               <i class="fas fa-calendar-alt"></i>
               <span class="hidden md:inline">Monthly View</span>
             </button>
-            <button id="settingsBtn" class="btn btn-icon" data-tooltip="Settings">
+            <button
+              id="settingsBtn"
+              class="btn btn-icon"
+              data-tooltip="Settings"
+            >
               <i class="fas fa-cog fa-lg"></i>
             </button>
           </div>
@@ -134,7 +145,9 @@
                   ><select id="category" name="category" required></select>
                 </div>
                 <div>
-                  <label for="description" class="block text-sm font-medium mb-1"
+                  <label
+                    for="description"
+                    class="block text-sm font-medium mb-1"
                     >Description</label
                   ><input
                     type="text"
@@ -177,7 +190,9 @@
                   />
                 </div>
                 <div>
-                  <label for="transferFrom" class="block text-sm font-medium mb-1"
+                  <label
+                    for="transferFrom"
+                    class="block text-sm font-medium mb-1"
                     >From Account</label
                   ><select
                     id="transferFrom"
@@ -223,7 +238,9 @@
                   >
                 </div>
               </div>
-              <h3 class="text-lg font-semibold mb-3 mt-4">Add CC Transaction</h3>
+              <h3 class="text-lg font-semibold mb-3 mt-4">
+                Add CC Transaction
+              </h3>
               <form id="ccTransactionForm" class="space-y-4">
                 <div>
                   <label for="ccAmount" class="block text-sm font-medium mb-1"
@@ -294,7 +311,9 @@
                   class="bg-gray-700 p-4 rounded-lg text-center shadow-md hover:bg-gray-600 transition duration-200 flex flex-col items-center justify-center"
                   data-tooltip="Cash Counter"
                 >
-                  <i class="fas fa-money-bill-wave text-2xl accent-text mb-1"></i>
+                  <i
+                    class="fas fa-money-bill-wave text-2xl accent-text mb-1"
+                  ></i>
                   <span class="text-sm font-medium text-gray-400"
                     >Cash Counter</span
                   >
@@ -306,7 +325,9 @@
                   <p class="font-semibold text-sm">LKR 0.00</p>
                 </div>
                 <div id="accountBalance-bank_1" class="bg-gray-600 p-3 rounded">
-                  <p class="text-xs font-medium text-gray-300">Commercial Bank</p>
+                  <p class="text-xs font-medium text-gray-300">
+                    Commercial Bank
+                  </p>
                   <p class="font-semibold text-sm">LKR 0.00</p>
                 </div>
                 <div id="accountBalance-bank_2" class="bg-gray-600 p-3 rounded">
@@ -353,17 +374,19 @@
                       >Total: LKR 0.00</span
                     >
                   </h3>
-                  <button
-                    id="addDebtBtn"
-                    class="btn btn-secondary btn-sm mb-3 w-full"
-                  >
-                    <i class="fas fa-plus"></i> Add New Debt
-                  </button>
-                  <div
-                    id="debtList"
-                    class="space-y-3 max-h-48 overflow-y-auto pr-2"
-                  >
-                    <p class="text-gray-400 text-sm">No debts recorded.</p>
+                  <div class="space-y-2">
+                    <button
+                      id="addDebtBtn"
+                      class="btn btn-secondary btn-sm w-full"
+                    >
+                      <i class="fas fa-plus"></i> Add New Debt
+                    </button>
+                    <button
+                      id="viewDebtsBtn"
+                      class="btn btn-outline-expense btn-sm w-full"
+                    >
+                      <i class="fas fa-list-ul"></i> View All Debts
+                    </button>
                   </div>
                 </div>
                 <div>
@@ -375,17 +398,19 @@
                       >Total: LKR 0.00</span
                     >
                   </h3>
-                  <button
-                    id="addReceivableBtn"
-                    class="btn btn-secondary btn-sm mb-3 w-full"
-                  >
-                    <i class="fas fa-plus"></i> Add New Receivable
-                  </button>
-                  <div
-                    id="receivableList"
-                    class="space-y-3 max-h-48 overflow-y-auto pr-2"
-                  >
-                    <p class="text-gray-400 text-sm">No receivables recorded.</p>
+                  <div class="space-y-2">
+                    <button
+                      id="addReceivableBtn"
+                      class="btn btn-secondary btn-sm w-full"
+                    >
+                      <i class="fas fa-plus"></i> Add New Receivable
+                    </button>
+                    <button
+                      id="viewReceivablesBtn"
+                      class="btn btn-outline-income btn-sm w-full"
+                    >
+                      <i class="fas fa-list-ul"></i> View All Receivables
+                    </button>
                   </div>
                 </div>
               </div>
@@ -407,10 +432,7 @@
                 >
                   <i class="fas fa-plus"></i> Add New Plan
                 </button>
-                <div
-                  id="installmentList"
-                  class="space-y-3 max-h-48 overflow-y-auto pr-2"
-                >
+                <div id="installmentList" class="space-y-3">
                   <p class="text-gray-400 text-sm">
                     No installment plans recorded.
                   </p>
@@ -474,7 +496,10 @@
               id="settingsAccountsPanel"
               class="settings-tab-panel space-y-6 hidden"
             >
-              <div class="card !p-4" style="background-color: var(--bg-tertiary)">
+              <div
+                class="card !p-4"
+                style="background-color: var(--bg-tertiary)"
+              >
                 <h3 class="text-lg font-semibold mb-3">
                   Manage Account Names & Balances
                 </h3>
@@ -497,7 +522,10 @@
               id="settingsCreditCardPanel"
               class="settings-tab-panel space-y-6 hidden"
             >
-              <div class="card !p-4" style="background-color: var(--bg-tertiary)">
+              <div
+                class="card !p-4"
+                style="background-color: var(--bg-tertiary)"
+              >
                 <h3 class="text-lg font-semibold mb-3">Credit Card Settings</h3>
                 <form id="settingsCcLimitForm" class="space-y-3 mb-4">
                   <div>
@@ -529,7 +557,9 @@
                     class="text-sm font-medium text-gray-300"
                     >Show CC Section on Dashboard</label
                   >
-                  <label class="relative inline-flex items-center cursor-pointer">
+                  <label
+                    class="relative inline-flex items-center cursor-pointer"
+                  >
                     <input
                       type="checkbox"
                       id="toggleCcSection"
@@ -546,7 +576,10 @@
               id="settingsCategoriesPanel"
               class="settings-tab-panel space-y-6 hidden"
             >
-              <div class="card !p-4" style="background-color: var(--bg-tertiary)">
+              <div
+                class="card !p-4"
+                style="background-color: var(--bg-tertiary)"
+              >
                 <h3 class="text-lg font-semibold mb-3">
                   Manage Expense Categories
                 </h3>
@@ -569,7 +602,10 @@
               id="settingsDataManagementPanel"
               class="settings-tab-panel space-y-6 hidden"
             >
-              <div class="card !p-4" style="background-color: var(--bg-tertiary)">
+              <div
+                class="card !p-4"
+                style="background-color: var(--bg-tertiary)"
+              >
                 <h3 class="text-lg font-semibold mb-3">Data Management</h3>
                 <div class="flex flex-col sm:flex-row gap-3">
                   <button id="exportDataBtn" class="btn btn-secondary flex-1">
@@ -597,7 +633,10 @@
                 <button id="initiateDeleteBtn" class="btn btn-danger w-full">
                   Delete All Data
                 </button>
-                <div id="deleteConfirmationSection" class="mt-4 hidden space-y-3">
+                <div
+                  id="deleteConfirmationSection"
+                  class="mt-4 hidden space-y-3"
+                >
                   <p class="text-red-300 font-medium">
                     Are you absolutely sure? This action cannot be undone!
                   </p>
@@ -610,7 +649,10 @@
                   >
                     <div class="slide-to-confirm-track"></div>
                     <div class="slide-to-confirm-text">Slide to Delete</div>
-                    <div class="slide-to-confirm-handle" id="deleteSliderHandle">
+                    <div
+                      class="slide-to-confirm-handle"
+                      id="deleteSliderHandle"
+                    >
                       <i class="fas fa-arrow-right"></i>
                     </div>
                   </div>
@@ -764,7 +806,10 @@
               </div>
             </div>
             <div class="pt-4">
-              <button type="submit" class="btn btn-primary w-full text-base py-3">
+              <button
+                type="submit"
+                class="btn btn-primary w-full text-base py-3"
+              >
                 <i class="fas fa-check-circle mr-2"></i>Save Setup & Get Started
               </button>
             </div>
@@ -834,60 +879,116 @@
       </div>
 
       <div id="formModal" class="modal">
-        <div class="modal-content max-w-lg"> <span class="modal-close" onclick="closeModal('formModal')">&times;</span>
-            <h2 id="formModalTitle" class="text-xl font-semibold mb-4">Modal Title</h2>
-            <form id="dynamicForm" class="space-y-4">
-                </form>
+        <div class="modal-content max-w-lg">
+          <span class="modal-close" onclick="closeModal('formModal')"
+            >&times;</span
+          >
+          <h2 id="formModalTitle" class="text-xl font-semibold mb-4">
+            Modal Title
+          </h2>
+          <form id="dynamicForm" class="space-y-4"></form>
         </div>
       </div>
 
       <div id="ccHistoryModal" class="modal">
         <div class="modal-content max-w-2xl">
-            <span class="modal-close" onclick="closeModal('ccHistoryModal')">&times;</span>
-            <h2 class="text-2xl font-semibold mb-4">Credit Card History & Payments</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4 text-sm">
-                <div class="bg-gray-700 p-3 rounded">
-                    <p class="text-gray-400">Limit:</p>
-                    <p id="ccHistoryLimit" class="font-semibold">LKR 0.00</p>
-                </div>
-                <div class="bg-gray-700 p-3 rounded">
-                    <p class="text-gray-400">Spent (Unpaid):</p>
-                    <p id="ccHistorySpentUnpaid" class="font-semibold text-expense">LKR 0.00</p>
-                </div>
-                <div class="bg-gray-700 p-3 rounded">
-                    <p class="text-gray-400">Available:</p>
-                    <p id="ccHistoryAvailable" class="font-semibold accent-text">LKR 0.00</p>
-                </div>
+          <span class="modal-close" onclick="closeModal('ccHistoryModal')"
+            >&times;</span
+          >
+          <h2 class="text-2xl font-semibold mb-4">
+            Credit Card History & Payments
+          </h2>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4 text-sm">
+            <div class="bg-gray-700 p-3 rounded">
+              <p class="text-gray-400">Limit:</p>
+              <p id="ccHistoryLimit" class="font-semibold">LKR 0.00</p>
             </div>
-            <div id="ccHistoryListContainer" class="max-h-96 overflow-y-auto pr-2">
-                </div>
+            <div class="bg-gray-700 p-3 rounded">
+              <p class="text-gray-400">Spent (Unpaid):</p>
+              <p id="ccHistorySpentUnpaid" class="font-semibold text-expense">
+                LKR 0.00
+              </p>
+            </div>
+            <div class="bg-gray-700 p-3 rounded">
+              <p class="text-gray-400">Available:</p>
+              <p id="ccHistoryAvailable" class="font-semibold accent-text">
+                LKR 0.00
+              </p>
+            </div>
+          </div>
+          <div
+            id="ccHistoryListContainer"
+            class="max-h-96 overflow-y-auto pr-2"
+          ></div>
         </div>
       </div>
 
       <div id="cashCounterModal" class="modal">
         <div class="modal-content max-w-md">
-            <span class="modal-close" onclick="closeModal('cashCounterModal')">&times;</span>
-            <h2 class="text-2xl font-semibold mb-4 text-center">Cash Counter</h2>
-            <form id="cashCounterForm">
-                <div class="grid grid-cols-3 gap-x-2 gap-y-3 items-center mb-4">
-                    <span class="font-semibold text-sm text-gray-400">Denomination</span>
-                    <span class="font-semibold text-sm text-gray-400 text-center">Count</span>
-                    <span class="font-semibold text-sm text-gray-400 text-right">Total</span>
-                    </div>
-                <div class="text-right font-bold text-xl my-4 border-t border-gray-600 pt-3">
-                    Grand Total: <span id="cashCounterTotal" class="accent-text">LKR 0.00</span>
-                </div>
-            </form>
-            <div id="cashCounterComparison" class="text-sm text-center mt-3"></div>
+          <span class="modal-close" onclick="closeModal('cashCounterModal')"
+            >&times;</span
+          >
+          <h2 class="text-2xl font-semibold mb-4 text-center">Cash Counter</h2>
+          <form id="cashCounterForm">
+            <div class="grid grid-cols-3 gap-x-2 gap-y-3 items-center mb-4">
+              <span class="font-semibold text-sm text-gray-400"
+                >Denomination</span
+              >
+              <span class="font-semibold text-sm text-gray-400 text-center"
+                >Count</span
+              >
+              <span class="font-semibold text-sm text-gray-400 text-right"
+                >Total</span
+              >
+            </div>
+            <div
+              class="text-right font-bold text-xl my-4 border-t border-gray-600 pt-3"
+            >
+              Grand Total:
+              <span id="cashCounterTotal" class="accent-text">LKR 0.00</span>
+            </div>
+          </form>
+          <div
+            id="cashCounterComparison"
+            class="text-sm text-center mt-3"
+          ></div>
         </div>
       </div>
 
+      <div id="debtsViewModal" class="modal">
+        <div class="modal-content max-w-2xl">
+          <span class="modal-close" onclick="closeModal('debtsViewModal')"
+            >&times;</span
+          >
+          <h2 class="text-2xl font-semibold mb-4">All Debts (I Owe)</h2>
+          <div
+            id="debtModalListContainer"
+            class="space-y-3 max-h-[70vh] overflow-y-auto pr-2"
+          >
+            <p class="text-gray-400 text-sm">Loading debts...</p>
+          </div>
+        </div>
+      </div>
+
+      <div id="receivablesViewModal" class="modal">
+        <div class="modal-content max-w-2xl">
+          <span class="modal-close" onclick="closeModal('receivablesViewModal')"
+            >&times;</span
+          >
+          <h2 class="text-2xl font-semibold mb-4">All Receivables (Owes Me)</h2>
+          <div
+            id="receivableModalListContainer"
+            class="space-y-3 max-h-[70vh] overflow-y-auto pr-2"
+          >
+            <p class="text-gray-400 text-sm">Loading receivables...</p>
+          </div>
+        </div>
+      </div>
 
       <div
         id="notificationArea"
         class="fixed bottom-5 right-5 z-[60] space-y-2 max-w-xs"
       ></div>
-
     </div>
     <script src="script.js" defer></script>
   </body>
