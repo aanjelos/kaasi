@@ -701,7 +701,7 @@ function showNotification(message, type = "success", duration = 4000) {
 
 function populateDropdowns() {
   const accountSelects = $$(
-    'select[name="account"], select[name="transferFrom"], select[name="transferTo"], select[name="receivableSourceAccount"], select[name="payDebtAccount"], select[name="recPaymentAccount"], select[name="instPayAccount"], select[name="ccPayFromAccount"], #modalAccount, #recSourceAccountAdd, #recSourceAccountEdit, #modalCcPayFromAccount, #modalInstPayAccount, #modalPayDebtAccount'
+    'select[name="account"], select[name="transferFrom"], select[name="transferTo"], select[name="receivableSourceAccount"], select[name="payDebtAccount"], select[name="recPaymentAccount"], select[name="instPayAccount"], select[name="ccPayFromAccount"], #modalAccount, #recSourceAccountAdd, #recSourceAccountEdit, #modalCcPayFromAccount, #modalInstPayAccount, #modalPayDebtAccount, #modalTransferFrom, #modalTransferTo' // Added new modal selectors: #modalTransferFrom, #modalTransferTo
   );
   const categorySelects = $$(
     "#category, #modalCategory, #modalPayDebtCategory, #modalInstPayCategory, #modalCcPayCategory"
@@ -1063,6 +1063,15 @@ function renderDebtList() {
           daysColor = "text-gray-300";
         }
 
+        // Updated button structure for consistency
+        const buttonsHtml = `
+        <div class="edit-btn-container">
+            <button class="text-xs accent-text hover:text-accent-hover focus:outline-none mr-2" onclick="openEditDebtForm('${d.id}')" title="Edit"><i class="fas fa-edit"></i></button>
+            <button class="text-xs text-income hover:opacity-80 focus:outline-none mr-2" onclick="openPayDebtForm('${d.id}')" title="Pay"><i class="fas fa-dollar-sign"></i></button>
+            <button class="text-xs text-gray-500 hover:text-expense focus:outline-none" onclick="deleteDebt('${d.id}')" title="Delete"><i class="fas fa-times"></i></button>
+        </div>
+        `;
+
         const itemDiv = document.createElement("div");
         itemDiv.className =
           "text-sm py-2 border-b border-gray-700 last:border-b-0";
@@ -1078,17 +1087,7 @@ function renderDebtList() {
           </div>
           <div class="flex justify-between items-center text-xs text-gray-500 mt-1">
             <span>Due: ${new Date(d.dueDate).toLocaleDateString()}</span>
-            <div class="edit-btn-container">
-              <button class="link-style text-xs mr-2 accent-text hover:text-accent-hover" onclick="openEditDebtForm('${
-                d.id
-              }')">Edit</button>
-              <button class="link-style text-xs mr-2 text-income hover:opacity-80" onclick="openPayDebtForm('${
-                d.id
-              }')">Pay</button>
-              <button class="text-gray-500 hover:text-expense text-xs focus:outline-none" onclick="deleteDebt('${
-                d.id
-              }')" title="Delete"><i class="fas fa-times"></i></button>
-            </div>
+            ${buttonsHtml}
           </div>
         `;
         itemsListContainer.appendChild(itemDiv);
@@ -1109,7 +1108,7 @@ function renderReceivableList() {
   listContainer.innerHTML = "";
 
   const cashBankReceivables = state.receivables.filter(
-    (r) => r.type === "cash" || !r.type
+    (r) => r.type === "cash" || !r.type 
   );
   const ccReceivables = state.receivables.filter((r) => r.type === "cc");
 
@@ -1137,12 +1136,9 @@ function renderReceivableList() {
       0
     );
     const groupTotalSpan = document.createElement("span");
-
     groupTotalSpan.className = "text-base font-normal text-gray-100";
-
     groupTotalSpan.textContent = `Total: ${formatCurrency(groupTotalAmount)}`;
     sectionTitleHeader.appendChild(groupTotalSpan);
-
     sectionWrapper.appendChild(sectionTitleHeader);
 
     if (receivablesForGroup.length === 0) {
@@ -1235,6 +1231,15 @@ function renderReceivableList() {
               srcTxt = "(Via CC)";
             }
 
+            // Updated button structure for consistency
+            const buttonsHtml = `
+            <div class="edit-btn-container">
+                <button class="text-xs accent-text hover:text-accent-hover focus:outline-none mr-2" onclick="openEditReceivableForm('${r.id}')" title="Edit"><i class="fas fa-edit"></i></button>
+                <button class="text-xs text-income hover:opacity-80 focus:outline-none mr-2" onclick="openReceivePaymentForm('${r.id}')" title="Receive"><i class="fas fa-hand-holding-usd"></i></button>
+                <button class="text-xs text-gray-500 hover:text-expense focus:outline-none" onclick="deleteReceivable('${r.id}')" title="Delete"><i class="fas fa-times"></i></button>
+            </div>
+            `;
+
             const itemDiv = document.createElement("div");
             itemDiv.className =
               "text-sm py-2 border-b border-gray-700 last:border-b-0";
@@ -1252,17 +1257,7 @@ function renderReceivableList() {
                 <span>Given: ${new Date(
                   r.dateGiven
                 ).toLocaleDateString()}</span>
-                <div class="edit-btn-container">
-                  <button class="link-style text-xs mr-2 accent-text hover:text-accent-hover" onclick="openEditReceivableForm('${
-                    r.id
-                  }')">Edit</button>
-                  <button class="link-style text-xs mr-2 text-income hover:opacity-80" onclick="openReceivePaymentForm('${
-                    r.id
-                  }')">Receive</button>
-                  <button class="text-gray-500 hover:text-expense text-xs focus:outline-none" onclick="deleteReceivable('${
-                    r.id
-                  }')" title="Delete"><i class="fas fa-times"></i></button>
-                </div>
+                ${buttonsHtml}
               </div>
             `;
             itemsListContainer.appendChild(itemDiv);
@@ -1314,52 +1309,56 @@ function renderInstallmentList() {
       "p-3 rounded bg-gray-700/50 text-sm mb-2 flex items-center gap-x-3";
 
     const ringHtml = `
-                <div class="installment-progress-ring-container w-10 h-10 flex-shrink-0" title="${progressPercent.toFixed(
-                  0
-                )}% Paid (${i.monthsLeft} months left)">
-                    <svg class="w-full h-full" viewBox="0 0 36 36">
-                        <path class="progress-ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke-width="3"></path>
-                        <path class="progress-ring-circle" stroke-dasharray="${progressPercent.toFixed(
-                          2
-                        )}, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke-linecap="round" stroke-width="3"></path>
-                        <text x="18" y="17.5" class="progress-ring-text" text-anchor="middle" fill="var(--text-primary)">${
-                          i.monthsLeft
-                        }</text> 
-                    </svg>
-                </div>
-            `;
+            <div class="installment-progress-ring-container w-10 h-10 flex-shrink-0" title="${progressPercent.toFixed(
+              0
+            )}% Paid (${i.monthsLeft} months left)">
+                <svg class="w-full h-full" viewBox="0 0 36 36">
+                    <path class="progress-ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke-width="3"></path>
+                    <path class="progress-ring-circle" stroke-dasharray="${progressPercent.toFixed(
+                      2
+                    )}, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke-linecap="round" stroke-width="3"></path>
+                    <text x="18" y="17.5" class="progress-ring-text" text-anchor="middle" fill="var(--text-primary)">${
+                      i.monthsLeft
+                    }</text> 
+                </svg>
+            </div>
+        `;
+
+    // Updated button structure for consistency
+    const buttonsHtml = `
+        <div class="edit-btn-container">
+            ${ i.monthsLeft > 0 ? `
+                <button class="text-xs accent-text hover:text-accent-hover focus:outline-none mr-2" onclick="openEditInstallmentForm('${i.id}')" title="Edit"><i class="fas fa-edit"></i></button>
+                <button class="text-xs text-income hover:opacity-80 focus:outline-none mr-2" onclick="payInstallmentMonth('${i.id}')" title="Pay Month"><i class="fas fa-credit-card"></i></button>
+            ` : `
+                <button class="text-xs accent-text hover:text-accent-hover focus:outline-none mr-2" onclick="openEditInstallmentForm('${i.id}')" title="Edit"><i class="fas fa-edit"></i></button>
+            `}
+            <button class="text-xs text-gray-500 hover:text-expense focus:outline-none" onclick="deleteInstallment('${i.id}')" title="Delete"><i class="fas fa-times"></i></button>
+        </div>
+    `;
 
     div.innerHTML = `
-                ${ringHtml}
-                <div class="flex-grow">
-                    <div class="flex justify-between items-start mb-1">
-                        <div>
-                            <p class="font-medium">${i.description}</p>
-                            <p class="text-xs text-gray-400">${formatCurrency(
-                              i.monthlyAmount
-                            )} / month</p>
-                        </div>
-                        <span class="font-semibold text-gray-200 whitespace-nowrap">${formatCurrency(
-                          totalLeftToPay
-                        )} Left</span> 
+            ${ringHtml}
+            <div class="flex-grow">
+                <div class="flex justify-between items-start mb-1">
+                    <div>
+                        <p class="font-medium">${i.description}</p>
+                        <p class="text-xs text-gray-400">${formatCurrency(
+                          i.monthlyAmount
+                        )} / month</p>
                     </div>
-                    <div class="flex justify-between items-center text-xs text-gray-400 mt-1">
-                        <span>${i.monthsLeft} of ${
+                    <span class="font-semibold text-gray-200 whitespace-nowrap">${formatCurrency(
+                      totalLeftToPay
+                    )} Left</span> 
+                </div>
+                <div class="flex justify-between items-center text-xs text-gray-400 mt-1">
+                    <span>${i.monthsLeft} of ${
       i.totalMonths
     } months left (${daysLeftText})</span>
-                        <div class="edit-btn-container">
-                            ${
-                              i.monthsLeft > 0
-                                ? `<button class="link-style text-sm mr-2 accent-text hover:text-accent-hover" onclick="openEditInstallmentForm('${i.id}')">Edit</button><button class="text-income hover:opacity-80 mr-2 text-sm link-style" onclick="payInstallmentMonth('${i.id}')">Pay Month</button>`
-                                : `<button class="link-style text-sm mr-2 accent-text hover:text-accent-hover" onclick="openEditInstallmentForm('${i.id}')">Edit</button>`
-                            }
-                            <button class="text-gray-500 hover:text-expense text-xs focus:outline-none" onclick="deleteInstallment('${
-                              i.id
-                            }')" title="Delete"><i class="fas fa-times"></i></button>
-                        </div>
-                    </div>
+                    ${buttonsHtml}
                 </div>
-            `;
+            </div>
+        `;
     list.appendChild(div);
   });
 }
@@ -1778,40 +1777,56 @@ function deleteTransaction(id, event) {
 
 function handleTransferSubmit(event) {
   event.preventDefault();
-  const form = event.target,
-    formData = new FormData(form);
-  const amount = parseFloat(formData.get("transferAmount")),
-    fromAccountId = formData.get("transferFrom"),
-    toAccountId = formData.get("transferTo");
-  const errorEl = $("#transferError");
-  errorEl.classList.add("hidden");
+  const form = event.target; // This will be transferModalForm
+  const formData = new FormData(form);
+
+  // Get values from the modal form fields
+  const amount = parseFloat(formData.get("transferAmount")); // Name attribute is 'transferAmount' in modal
+  const fromAccountId = formData.get("transferFrom");     // Name attribute is 'transferFrom' in modal
+  const toAccountId = formData.get("transferTo");         // Name attribute is 'transferTo' in modal
+
+  const errorEl = $("#modalTransferError"); // Target the error element in the modal
+  if (errorEl) errorEl.classList.add("hidden"); // Ensure it's hidden initially
+
   if (isNaN(amount) || amount <= 0) {
     showNotification("Valid amount required.", "error");
     return;
   }
-  if (fromAccountId === toAccountId) {
-    errorEl.classList.remove("hidden");
-    showNotification("Cannot transfer to same account.", "error");
+  if (!fromAccountId || !toAccountId) { // Basic check for account selection
+    showNotification("Both 'From' and 'To' accounts must be selected.", "error");
     return;
   }
+  if (fromAccountId === toAccountId) {
+    if (errorEl) errorEl.classList.remove("hidden");
+    showNotification("Cannot transfer to the same account.", "error");
+    return;
+  }
+
   const fromAccount = state.accounts.find((acc) => acc.id === fromAccountId);
   const toAccount = state.accounts.find((acc) => acc.id === toAccountId);
+
   if (!fromAccount || !toAccount) {
-    showNotification("Invalid account.", "error");
+    showNotification("Invalid account selected.", "error");
     return;
   }
   if (fromAccount.balance < amount) {
     showNotification(`Insufficient funds in ${fromAccount.name}.`, "warning");
+    // Optionally, still allow the attempt or return;
+    // For now, we'll return to prevent negative balances from transfers
     return;
   }
+
   fromAccount.balance -= amount;
   toAccount.balance += amount;
-  if (isNaN(fromAccount.balance)) fromAccount.balance = 0;
-  if (isNaN(toAccount.balance)) toAccount.balance = 0;
+  if (isNaN(fromAccount.balance)) fromAccount.balance = 0; // Safeguard
+  if (isNaN(toAccount.balance)) toAccount.balance = 0;   // Safeguard
+
   saveData();
   renderDashboard();
-  populateDropdowns();
-  form.reset();
+  populateDropdowns(); // Repopulate to reflect balance changes
+  form.reset(); // Reset the modal form
+  closeModal("transferMoneyModal"); // Close the modal on success
+
   showNotification(
     `Transferred ${formatCurrency(amount)} from ${fromAccount.name} to ${
       toAccount.name
@@ -2283,8 +2298,8 @@ function openCcHistoryModal() {
   $("#ccHistorySpentUnpaid").textContent = formatCurrency(spentUnpaid);
   const availableEl = $("#ccHistoryAvailable");
   availableEl.textContent = formatCurrency(available);
-  availableEl.classList.toggle("text-expense", available < 0); 
-  availableEl.classList.toggle("accent-text", available >= 0); 
+  availableEl.classList.toggle("text-expense", available < 0);
+  availableEl.classList.toggle("accent-text", available >= 0);
 
   listContainer.innerHTML = "";
   const sortedTransactions = [...transactions].sort(
@@ -2303,49 +2318,49 @@ function openCcHistoryModal() {
         t.paidOff ? "opacity-60" : ""
       }`;
       const remainingOnItem = t.amount - (t.paidAmount || 0);
+
+      // Consistent button structure
+      const buttonsHtml = `
+      <div class="edit-btn-container">
+          ${!t.paidOff && remainingOnItem > 0.005 ? `
+              <button class="text-xs text-income hover:opacity-80 focus:outline-none mr-2" onclick="openPayCcItemForm('${t.id}')" title="Pay Item"><i class="fas fa-dollar-sign"></i></button>
+          ` : ''}
+          <button class="text-xs accent-text hover:text-accent-hover focus:outline-none mr-2" onclick="openEditCcTransactionForm('${t.id}')" title="Edit"><i class="fas fa-edit"></i></button>
+          <button class="text-xs text-gray-500 hover:text-expense focus:outline-none" onclick="deleteCcTransaction('${t.id}')" title="Delete"><i class="fas fa-times"></i></button>
+      </div>
+      `;
+
       div.innerHTML = `
-                    <div class="cc-history-item-details flex-grow mr-3 overflow-hidden">
-                        <p class="cc-history-item-description ${
-                          t.paidOff ? "text-gray-500" : ""
-                        }" title="${t.description}">${t.description}</p>
-                        <p class="cc-history-item-date">${new Date(
-                          t.date
-                        ).toLocaleDateString()} ${
+        <div class="cc-history-item-details flex-grow mr-3 overflow-hidden">
+            <p class="cc-history-item-description ${
+              t.paidOff ? "text-gray-500" : ""
+            }" title="${t.description}">${t.description}</p>
+            <p class="cc-history-item-date">${new Date(
+              t.date
+            ).toLocaleDateString()} ${
         t.paidAmount > 0 && !t.paidOff
           ? `(Paid: ${formatCurrency(t.paidAmount)})`
           : ""
       }</p>
-                    </div>
-                    <div class="flex items-center flex-shrink-0">
-                        <span class="font-semibold mr-3 ${
-                          t.paidOff
-                            ? "text-gray-500"
-                            : remainingOnItem <= 0.005
-                            ? "text-income"
-                            : "text-expense"
-                        }">
-                            ${
-                              t.paidOff
-                                ? formatCurrency(t.amount)
-                                : formatCurrency(remainingOnItem)
-                            } ${
+        </div>
+        <div class="flex items-center flex-shrink-0">
+            <span class="font-semibold mr-3 ${
+              t.paidOff
+                ? "text-gray-500"
+                : remainingOnItem <= 0.005
+                ? "text-income"
+                : "text-expense"
+            }">
+                ${
+                  t.paidOff
+                    ? formatCurrency(t.amount)
+                    : formatCurrency(remainingOnItem)
+                } ${
         t.paidOff ? "" : remainingOnItem <= 0.005 ? " (Settled)" : " Left"
       }
-                        </span>
-                        <div class="edit-btn-container">
-                            ${
-                              !t.paidOff && remainingOnItem > 0.005
-                                ? `<button class="text-xs text-income hover:opacity-80 focus:outline-none mr-1" onclick="openPayCcItemForm('${t.id}')" title="Pay Item"><i class="fas fa-dollar-sign"></i></button>`
-                                : ""
-                            }
-                            <button class="text-xs accent-text hover:text-accent-hover focus:outline-none mr-1" onclick="openEditCcTransactionForm('${
-                              t.id
-                            }')" title="Edit"><i class="fas fa-edit"></i></button>
-                            <button class="text-gray-500 hover:text-expense text-xs focus:outline-none" onclick="deleteCcTransaction('${
-                              t.id
-                            }')" title="Delete"><i class="fas fa-times"></i></button>
-                        </div>
-                    </div>`;
+            </span>
+            ${buttonsHtml}
+        </div>`;
       listContainer.appendChild(div);
     });
   }
@@ -3366,26 +3381,57 @@ function handleEditInstallmentSubmit(event) {
 
 function payInstallmentMonth(installmentId) {
   const installment = state.installments.find((i) => i.id === installmentId);
-  if (!installment || installment.monthsLeft <= 0) return;
+  if (!installment || installment.monthsLeft <= 0) {
+    showNotification(
+      installment && installment.monthsLeft <= 0
+        ? "Installment plan already fully paid."
+        : "Installment not found.",
+      "info"
+    );
+    return;
+  }
+
   const categoryOptions = state.categories
-    .filter((c) => c !== "Income" && c !== "Credit Card Payment")
+    .filter((c) => c.toLowerCase() !== "income" && c.toLowerCase() !== "credit card payment") // Exclude "Income" and "Credit Card Payment"
+    .sort((a,b) => a.localeCompare(b)) // Sort alphabetically
     .map(
       (cat) =>
         `<option value="${cat}" ${
-          cat === "Installment Payment" ? "selected" : ""
+          // Try to pre-select "Installment Payment" or a similar default
+          cat.toLowerCase() === "installment payment" || cat.toLowerCase() === "installments" ? "selected" : ""
         }>${cat}</option>`
     )
     .join("");
+
+  // Disclaimer HTML, similar to the one for receivables
+  const disclaimerHtml = `
+    <p id="installmentPaymentCcDisclaimer" class="disclaimer-text mt-3 mb-2" style="display: block;">
+        <i class="fas fa-info-circle mr-1"></i>
+        <strong>Important:</strong> If this installment is for a credit card purchase, remember this action logs the payment from your chosen account. It does not automatically record a payment towards your credit card bill itself. You may need to record a separate 'Credit Card Payment' transaction if you are settling your credit card statement.
+    </p>
+  `;
+
   openFormModal(
     `Pay Installment: ${installment.description}`,
     `<p class="mb-2">Paying 1 month (${formatCurrency(
       installment.monthlyAmount
     )}). ${
       installment.monthsLeft - 1
-    } months will remain.</p><div><label class="block text-sm font-medium mb-1">Pay From Account</label><select id="modalInstPayAccount" name="instPayAccount" required></select></div><div><label class="block text-sm font-medium mb-1">Category</label><select id="modalInstPayCategory" name="instPayCategory" required>${categoryOptions}</select></div><input type="hidden" name="installmentId" value="${installmentId}"><button type="submit" class="btn btn-primary w-full">Confirm Payment</button>`,
+    } months will remain.</p>
+     <div>
+        <label class="block text-sm font-medium mb-1">Pay From Account</label>
+        <select id="modalInstPayAccount" name="instPayAccount" required></select>
+     </div>
+     <div>
+        <label class="block text-sm font-medium mb-1">Category for this Payment</label>
+        <select id="modalInstPayCategory" name="instPayCategory" required>${categoryOptions}</select>
+     </div>
+     ${disclaimerHtml}
+     <input type="hidden" name="installmentId" value="${installmentId}">
+     <button type="submit" class="btn btn-primary w-full mt-4">Confirm Payment</button>`, // Added mt-4 for spacing
     handlePayInstallmentSubmit
   );
-  populateDropdowns();
+  populateDropdowns(); // Ensure dropdowns in the modal are populated
 }
 
 function handlePayInstallmentSubmit(event) {
@@ -4388,7 +4434,9 @@ function openFormModal(title, formHtml, submitHandler) {
 }
 window.addEventListener("click", (event) => {
   $$(".modal").forEach((modal) => {
-    if (event.target === modal) closeModal(modal.id);
+    if (event.target === modal && modal.id !== 'initialSetupModal') {
+      closeModal(modal.id);
+    }
   });
 });
 
@@ -4578,21 +4626,23 @@ function initializeUI(isRefresh = false) {
   console.log("Initializing UI...");
 
   if (!isRefresh) {
-    loadData(); 
+    loadData(); // Load data from localStorage on initial page load
   }
 
+  // Check if initial setup is done, if not, open the wizard
   if (
     !state.settings ||
     state.settings.initialSetupDone === undefined ||
     state.settings.initialSetupDone === false
   ) {
-    if (!isRefresh) {
+    if (!isRefresh) { // Only open wizard on initial load if setup isn't done
       console.log("Initial setup not done. Opening wizard.");
       openInitialSetupWizard();
-      return;
+      return; // Stop further UI initialization until setup is complete
     }
   }
 
+  // Set default dates for main transaction and CC transaction forms
   const mainDateInput = $("#date");
   if (mainDateInput)
     mainDateInput.value = new Date().toISOString().split("T")[0];
@@ -4601,32 +4651,37 @@ function initializeUI(isRefresh = false) {
     mainCcDateInput.value = new Date().toISOString().split("T")[0];
 
   populateDropdowns();
-  renderDashboard(); 
+  renderDashboard(); // This will call other render functions like renderInstallmentList
 
   updateCcDashboardSectionVisibility();
-  setupMonthlyView();
-  if (!window.deleteSliderInitialized) {
+  setupMonthlyView(); // Sets up year selector and month tabs for the monthly view modal
+
+  if (!window.deleteSliderInitialized) { // Ensure delete slider is set up only once
     setupDeleteSlider();
     window.deleteSliderInitialized = true;
   }
 
-  displayAppVersion();
+  displayAppVersion(); // Display app version in settings and setup modals
 
+  // --- Main Form Event Listeners ---
   $("#transactionForm").onsubmit = handleTransactionSubmit;
   $("#ccTransactionForm").onsubmit = handleCcTransactionSubmit;
-  $("#transferForm").onsubmit = handleTransferSubmit;
+  // $("#transferForm").onsubmit = handleTransferSubmit; // REMOVED: Old transfer form listener
 
+  // --- Header Button Event Listeners ---
   $("#settingsBtn").onclick = () => {
     openSettingsModal();
   };
+
   $("#monthlyViewBtn").onclick = () => {
     const yearSelector = $("#yearSelector");
     if (yearSelector && yearSelector.value) {
       renderMonthTabs(parseInt(yearSelector.value));
     } else {
-      renderMonthTabs(new Date().getFullYear());
+      renderMonthTabs(new Date().getFullYear()); // Default to current year if selector not ready
     }
     $("#monthlyViewModal").style.display = "block";
+    // Attempt to select and click the current month's tab
     const currentMonth = new Date().getMonth();
     const currentYearVal = yearSelector
       ? parseInt(yearSelector.value)
@@ -4637,16 +4692,64 @@ function initializeUI(isRefresh = false) {
     if (currentMonthTab) {
       currentMonthTab.click();
     } else if ($$("#monthTabs .tab-button").length > 0) {
+      // Fallback to the first available tab if current month's isn't found
       $$("#monthTabs .tab-button")[0].click();
     } else {
       $("#monthlyDetailsContainer").innerHTML =
         '<p class="text-center text-gray-400">Select a month.</p>';
     }
   };
+
+  // --- Transfer Money Modal ---
+  const openTransferModalButton = $("#openTransferModalBtn");
+  if (openTransferModalButton) {
+    openTransferModalButton.onclick = () => {
+      const modal = $("#transferMoneyModal");
+      if (modal) {
+        // Populate dropdowns to ensure account balances are current
+        // This is important if balances changed since last modal open
+        populateDropdowns(); 
+        
+        const transferModalForm = $("#transferModalForm");
+        if(transferModalForm) {
+            transferModalForm.reset(); // Reset form fields on open
+        }
+        
+        const errorEl = $("#modalTransferError"); // Get the error message p tag
+        if(errorEl) {
+            errorEl.classList.add("hidden"); // Hide any previous error messages
+        }
+
+        modal.style.display = "block";
+        
+        // Attempt to focus the first input field in the modal
+        const firstInput = modal.querySelector('input[type="number"], select');
+        if (firstInput) {
+            firstInput.focus();
+        }
+
+      } else {
+        console.error("Transfer money modal (#transferMoneyModal) not found!");
+      }
+    };
+  } else {
+    console.error("Open transfer modal button (#openTransferModalBtn) not found!");
+  }
+
+  const transferModalFormElement = $("#transferModalForm");
+  if (transferModalFormElement) {
+    transferModalFormElement.onsubmit = handleTransferSubmit; // Use the updated handleTransferSubmit
+  } else {
+    console.error("Transfer modal form element (#transferModalForm) not found!");
+  }
+
+  // --- Settings Modal Buttons ---
   $("#exportDataBtn").onclick = exportData;
   $("#importDataInput").onchange = importData;
   $("#initiateDeleteBtn").onclick = initiateDeleteAllData;
   $("#cancelDeleteBtn").onclick = cancelDeleteAllData;
+
+  // --- Dashboard Action Buttons ---
   $("#addDebtBtn").onclick = openAddDebtForm;
   $("#addReceivableBtn").onclick = openAddReceivableForm;
   $("#addInstallmentBtn").onclick = openAddInstallmentForm;
@@ -4656,7 +4759,7 @@ function initializeUI(isRefresh = false) {
   const viewDebtsBtn = $("#viewDebtsBtn");
   if (viewDebtsBtn) {
     viewDebtsBtn.onclick = () => {
-      renderDebtList(); 
+      renderDebtList(); // Render fresh list when modal is opened
       $("#debtsViewModal").style.display = "block"; 
     };
   }
@@ -4664,14 +4767,16 @@ function initializeUI(isRefresh = false) {
   const viewReceivablesBtn = $("#viewReceivablesBtn");
   if (viewReceivablesBtn) {
     viewReceivablesBtn.onclick = () => {
-      renderReceivableList(); 
+      renderReceivableList(); // Render fresh list when modal is opened
       $("#receivablesViewModal").style.display = "block"; 
     };
   }
 
+  // --- Transaction Form Category Visibility Toggle ---
   const transactionTypeSelect = $("#transactionType");
   const categoryGroup = $("#categoryGroup");
-  const descriptionInput = $("#description");
+  const descriptionInput = $("#description"); // Assuming this is the ID for the main form's description
+
   const toggleMainCategoryVisibility = () => {
     if (!transactionTypeSelect || !categoryGroup) return;
     if (transactionTypeSelect.value === "income") {
@@ -4686,17 +4791,20 @@ function initializeUI(isRefresh = false) {
         descriptionInput.placeholder = "e.g., Lunch, Groceries";
     }
   };
+
   if (transactionTypeSelect) {
     transactionTypeSelect.onchange = toggleMainCategoryVisibility;
-    toggleMainCategoryVisibility();
+    toggleMainCategoryVisibility(); // Initial call to set visibility based on default selection
   }
 
-  renderInstallmentList(); 
+  // renderInstallmentList(); // Already called by renderDashboard()
 
-  if (!window.countdownInterval) {
-
+  // --- Periodic Updates/Checks (Example: update dynamic elements every hour) ---
+  if (!window.countdownInterval) { // Ensure interval is set only once
     window.countdownInterval = setInterval(() => {
-
+      // Example: Refresh parts of the dashboard that might change over time
+      // This is a placeholder for any such logic you might have or add.
+      // For now, it re-renders totals which are already updated by renderDashboard.
       const totalOwedEl = $("#totalOwed");
       const totalOwedToMeEl = $("#totalOwedToMe");
       if (totalOwedEl) {
@@ -4709,15 +4817,16 @@ function initializeUI(isRefresh = false) {
           state.receivables.reduce((s, r) => s + r.remainingAmount, 0)
         )}`;
       }
-      renderInstallmentList(); 
-    }, 1000 * 60 * 60); 
+      renderInstallmentList(); // Re-render installments if their status might change passively
+    }, 1000 * 60 * 60); // Every hour
   }
 
-  if (!window.backupReminderInterval) {
-    checkAndTriggerBackupReminder();
+  // --- Backup Reminder Check ---
+  if (!window.backupReminderInterval) { // Ensure interval is set only once
+    checkAndTriggerBackupReminder(); // Initial check on load
     window.backupReminderInterval = setInterval(
       checkAndTriggerBackupReminder,
-      1000 * 60 * 60
+      1000 * 60 * 60 // Check every hour
     );
     console.log("Backup reminder interval started.");
   }

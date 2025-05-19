@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="application-version" content="v3.48d" />
+    <meta name="application-version" content="v5.51f" />
     <title>Kaasi - Expense Tracker | Manage Your Finances 🇱🇰</title>
     <meta
       name="title"
@@ -167,52 +167,7 @@
                 </button>
               </form>
             </div>
-            <div class="card">
-              <h2
-                class="text-xl font-semibold mb-4 border-b border-gray-600 pb-2"
-              >
-                Transfer Money
-              </h2>
-              <form id="transferForm" class="space-y-4">
-                <div>
-                  <label
-                    for="transferAmount"
-                    class="block text-sm font-medium mb-1"
-                    >Amount (LKR)</label
-                  ><input
-                    type="number"
-                    id="transferAmount"
-                    name="transferAmount"
-                    step="0.01"
-                    min="0"
-                    placeholder="Amount to transfer"
-                    required
-                  />
-                </div>
-                <div>
-                  <label
-                    for="transferFrom"
-                    class="block text-sm font-medium mb-1"
-                    >From Account</label
-                  ><select
-                    id="transferFrom"
-                    name="transferFrom"
-                    required
-                  ></select>
-                </div>
-                <div>
-                  <label for="transferTo" class="block text-sm font-medium mb-1"
-                    >To Account</label
-                  ><select id="transferTo" name="transferTo" required></select>
-                </div>
-                <p id="transferError" class="text-red-500 text-sm mt-1 hidden">
-                  From and To accounts cannot be the same.
-                </p>
-                <button type="submit" class="btn btn-secondary w-full">
-                  <i class="fas fa-exchange-alt"></i> Transfer
-                </button>
-              </form>
-            </div>
+            
             <div class="card" id="creditCardDashboardSection">
               <div
                 class="flex justify-between items-center mb-4 pb-2 border-b border-gray-600"
@@ -282,7 +237,16 @@
 
           <div class="lg:col-span-2 space-y-6 md:space-y-8">
             <div class="card">
-              <h2 class="text-xl font-semibold mb-4">Balance Overview</h2>
+              <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold">Balance Overview</h2>
+                <button
+                  id="openTransferModalBtn"
+                  class="btn btn-icon btn-sm" /* Using btn-sm for a slightly smaller icon if preferred */
+                  data-tooltip="Transfer Money"
+                >
+                  <i class="fas fa-exchange-alt fa-lg"></i>
+                </button>
+              </div>
               <div
                 class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-4"
               >
@@ -887,6 +851,56 @@
             Modal Title
           </h2>
           <form id="dynamicForm" class="space-y-4"></form>
+        </div>
+      </div>
+
+      <div id="transferMoneyModal" class="modal">
+        <div class="modal-content max-w-lg">
+          <span class="modal-close" onclick="closeModal('transferMoneyModal')"
+            >&times;</span
+          >
+          <h2 class="text-2xl font-semibold mb-6 text-center flex items-center justify-center">
+            <i class="fas fa-exchange-alt mr-3 text-accent-primary"></i>Transfer Money
+          </h2>
+          <form id="transferModalForm" class="space-y-4">
+            <div>
+              <label
+                for="modalTransferAmount"
+                class="block text-sm font-medium mb-1"
+                >Amount (LKR)</label
+              ><input
+                type="number"
+                id="modalTransferAmount"
+                name="transferAmount" 
+                step="0.01"
+                min="0"
+                placeholder="Amount to transfer"
+                required
+              />
+            </div>
+            <div>
+              <label
+                for="modalTransferFrom"
+                class="block text-sm font-medium mb-1"
+                >From Account</label
+              ><select
+                id="modalTransferFrom"
+                name="transferFrom" 
+                required
+              ></select>
+            </div>
+            <div>
+              <label for="modalTransferTo" class="block text-sm font-medium mb-1"
+                >To Account</label
+              ><select id="modalTransferTo" name="transferTo" required></select> 
+            </div>
+            <p id="modalTransferError" class="text-red-500 text-sm mt-1 hidden">
+              From and To accounts cannot be the same.
+            </p>
+            <button type="submit" class="btn btn-primary w-full !mt-6"> 
+              <i class="fas fa-check-circle mr-2"></i> Confirm Transfer
+            </button>
+          </form>
         </div>
       </div>
 
