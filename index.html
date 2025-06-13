@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="application-version" content="v9.58f" />
+    <meta name="application-version" content="v2.63f" />
     <title>Kaasi - Expense Tracker | Manage Your Finances 🇱🇰</title>
     <meta
       name="title"
@@ -95,7 +95,7 @@
               onerror="this.onerror=null; this.src='https://placehold.co/200x50/e67e26/white?text=Kaasi+Logo&font=satoshi';"
             />
           </div>
-          <div>
+          <div class="flex items-center">
             <button
               id="monthlyViewBtn"
               class="btn btn-secondary mr-2"
@@ -103,6 +103,13 @@
             >
               <i class="fas fa-calendar-alt"></i>
               <span class="hidden md:inline">Monthly View</span>
+            </button>
+            <button
+              id="shortcutsHelpBtn"
+              class="btn btn-icon mr-2 hidden md:inline-flex"
+              data-tooltip="Keyboard Shortcuts"
+            >
+              <i class="fas fa-keyboard fa-lg"></i>
             </button>
             <button
               id="settingsBtn"
@@ -163,11 +170,12 @@
                     for="description"
                     class="block text-sm font-medium mb-1"
                     >Description</label
-                  ><input
+                  >
+                  <input
                     type="text"
                     id="description"
                     name="description"
-                    placeholder="e.g., Lunch with friends"
+                    placeholder="e.g., Lunch, Monthly Groceries"
                     required
                   />
                 </div>
@@ -233,7 +241,7 @@
                     type="text"
                     id="ccDescription"
                     name="ccDescription"
-                    placeholder="e.g., Online purchase"
+                    placeholder="e.g., Online purchase, Ride fare"
                     required
                   />
                 </div>
@@ -325,7 +333,7 @@
                 >
                 <span id="quickStats"
                   >Today: LKR 0.00 <span id="todaySpendingIndicator"></span> |
-                  This Week: LKR 0.00 <span id="weekSpendingIndicator"></span
+                  Past 7 Days: LKR 0.00 <span id="weekSpendingIndicator"></span
                 ></span>
               </div>
             </div>
@@ -448,6 +456,23 @@
               id="monthTabs"
               class="flex flex-wrap justify-center gap-x-1"
             ></div>
+          </div>
+          <div class="my-4 flex items-center gap-x-2">
+            <input
+              type="search"
+              id="monthlySearchInput"
+              name="monthlySearch"
+              placeholder="Search in this month's transactions..."
+              class="flex-grow"
+            />
+            <button
+              id="clearMonthlySearchBtn"
+              class="btn-icon-clear-search hidden flex-shrink-0"
+              aria-label="Clear search"
+              data-tooltip="Clear Search"
+            >
+              <i class="fas fa-times"></i>
+            </button>
           </div>
           <div id="monthlyDetailsContainer" class="mt-4">
             <p class="text-center text-gray-400">
@@ -1035,6 +1060,27 @@
           >
             <p class="text-gray-400 text-sm">Loading receivables...</p>
           </div>
+        </div>
+      </div>
+
+      <div id="shortcutsHelpModal" class="modal" style="z-index: 75">
+        <div class="modal-content max-w-lg">
+          <span class="modal-close" onclick="closeModal('shortcutsHelpModal')"
+            >&times;</span
+          >
+          <h2 class="text-2xl font-semibold mb-4 text-center">
+            <i class="fas fa-keyboard mr-2 text-accent-primary"></i>Keyboard
+            Shortcuts
+          </h2>
+          <div class="mb-4 text-xs text-gray-400 text-center">
+            Note: Shortcuts generally do not work when typing in input fields.
+          </div>
+          <ul
+            id="shortcutsList"
+            class="space-y-1 text-sm max-h-[60vh] overflow-y-auto pr-2"
+          >
+            <li class="text-center text-gray-500">Loading shortcuts...</li>
+          </ul>
         </div>
       </div>
 
